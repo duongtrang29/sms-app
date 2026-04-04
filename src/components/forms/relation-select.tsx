@@ -36,8 +36,8 @@ export function RelationSelect({
   const selectedValue =
     typeof value === "string" && value.trim() ? value : undefined;
   const selectedLabel = resolveOptionLabel(options, selectedValue);
-  const controlValue =
-    selectedValue ?? (allowEmpty ? EMPTY_SELECT_VALUE : undefined);
+  const controlValue = selectedValue ?? EMPTY_SELECT_VALUE;
+  const emptyOptionLabel = allowEmpty ? emptyLabel : placeholder;
 
   return (
     <Select
@@ -58,9 +58,9 @@ export function RelationSelect({
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-          {allowEmpty ? (
-            <SelectItem value={EMPTY_SELECT_VALUE}>{emptyLabel}</SelectItem>
-          ) : null}
+          <SelectItem disabled={!allowEmpty} value={EMPTY_SELECT_VALUE}>
+            {emptyOptionLabel}
+          </SelectItem>
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}

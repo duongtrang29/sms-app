@@ -32,7 +32,7 @@ import {
 import { upsertLecturerAction } from "@/features/lecturers/actions";
 import { lecturerSchema, type LecturerInput } from "@/features/lecturers/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import { mapOptions } from "@/lib/options";
 import type { LecturerRecord } from "@/features/lecturers/queries";
 import type { Department } from "@/types/app";

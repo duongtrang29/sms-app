@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import { mapOptions } from "@/lib/options";
 import { upsertMajorAction } from "@/features/majors/actions";
 import { majorSchema, type MajorInput } from "@/features/majors/schemas";

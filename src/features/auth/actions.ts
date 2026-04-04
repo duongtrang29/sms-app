@@ -30,12 +30,19 @@ async function tryAuditLog(
     p_metadata: (metadata ?? {}) as Json,
   };
 
-  const rpc = supabase.rpc as unknown as (
-    fn: "log_audit_event",
-    payload: typeof args,
-  ) => Promise<unknown>;
+  try {
+    const rpc = supabase.rpc.bind(supabase) as unknown as (
+      fn: "log_audit_event",
+      payload: typeof args,
+    ) => Promise<{ error: { message: string } | null }>;
+    const { error } = await rpc("log_audit_event", args);
 
-  await rpc("log_audit_event", args);
+    if (error) {
+      console.error("Failed to write auth audit log:", error.message, args);
+    }
+  } catch (error) {
+    console.error("Unexpected auth audit log failure:", error, args);
+  }
 }
 
 export async function loginAction(

@@ -11,6 +11,27 @@ import { createClient } from "@/lib/supabase/server";
 import { scheduleSchema } from "@/features/schedules/schemas";
 import type { ActionState } from "@/types/app";
 
+const scheduleOverlapRules = [
+  {
+    field: "room_id",
+    message: "Phòng học đang bị trùng lịch trong khung giờ này.",
+    test: [
+      "schedules_room_overlap_excl",
+      "exclude_room_schedule_overlap",
+      "conflicting key value violates exclusion constraint",
+    ],
+  },
+  {
+    field: "start_time",
+    message: "Khung giờ học không hợp lệ hoặc đang bị trùng.",
+    test: [
+      "schedules_room_overlap_excl",
+      "exclude_room_schedule_overlap",
+      "time_range",
+    ],
+  },
+];
+
 export async function upsertScheduleAction(
   _previousState: ActionState,
   formData: FormData,
@@ -42,18 +63,10 @@ export async function upsertScheduleAction(
       .eq("id", parsed.data.id);
 
     if (error) {
-      const fieldErrors = matchServerFieldErrors(error.message, [
-        {
-          field: "room_id",
-          message: "Phòng học đang bị trùng lịch trong khung giờ này.",
-          test: ["exclude_room_schedule_overlap", "room_id"],
-        },
-        {
-          field: "start_time",
-          message: "Khung giờ học không hợp lệ hoặc đang bị trùng.",
-          test: ["exclude_room_schedule_overlap", "time_range"],
-        },
-      ]);
+      const fieldErrors = matchServerFieldErrors(
+        error.message,
+        scheduleOverlapRules,
+      );
 
       return failure(
         fieldErrors
@@ -76,18 +89,10 @@ export async function upsertScheduleAction(
       .single();
 
     if (error) {
-      const fieldErrors = matchServerFieldErrors(error.message, [
-        {
-          field: "room_id",
-          message: "Phòng học đang bị trùng lịch trong khung giờ này.",
-          test: ["exclude_room_schedule_overlap", "room_id"],
-        },
-        {
-          field: "start_time",
-          message: "Khung giờ học không hợp lệ hoặc đang bị trùng.",
-          test: ["exclude_room_schedule_overlap", "time_range"],
-        },
-      ]);
+      const fieldErrors = matchServerFieldErrors(
+        error.message,
+        scheduleOverlapRules,
+      );
 
       return failure(
         fieldErrors

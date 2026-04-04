@@ -1,23 +1,21 @@
 # Student Management System
 
-Hệ thống quản lý sinh viên theo hướng production-ready ở mức đồ án/demo mạnh, xây dựng bằng `Next.js App Router + TypeScript + Tailwind + shadcn/ui + Supabase`.
-
-Ứng dụng phục vụ 3 nhóm người dùng:
+Hệ thống quản lý sinh viên xây dựng bằng `Next.js 16 + TypeScript + Supabase`, phục vụ ba vai trò:
 
 - `ADMIN`
 - `LECTURER`
 - `STUDENT`
 
-Trọng tâm của phiên bản này là:
+Tài liệu này là hướng dẫn chính thức cho trạng thái hiện tại của repo. Mục tiêu là giúp bạn:
 
-- mô hình dữ liệu đúng nghiệp vụ đại học
-- auth + role model rõ ràng
-- kiểm tra phân quyền ở server-side
-- Row Level Security trên Supabase
-- seed/reset demo data tách biệt với dữ liệu thật bằng `is_demo` + `demo_batch`
-- cấu trúc code đủ sạch để tiếp tục nâng cấp thành hệ thống thật
+- dựng hệ thống từ đầu trên môi trường mới
+- tạo tài khoản admin riêng của mình
+- chọn đúng chiến lược dữ liệu khởi tạo
+- chạy local, kiểm tra chất lượng và chuẩn bị deploy
 
-## Stack
+## 1. Kiến trúc hiện tại
+
+### 1.1 Stack
 
 - Next.js 16 App Router
 - TypeScript strict
@@ -25,208 +23,60 @@ Trọng tâm của phiên bản này là:
 - shadcn/ui
 - Supabase Auth
 - Supabase PostgreSQL
-- React Hook Form
-- Zod
+- React Hook Form + Zod
 - TanStack Table
 - Recharts
 
-## Refactor Highlights
+### 1.2 Năng lực nghiệp vụ
 
-Phiên bản hiện tại đã được refactor theo hướng giữ nguyên nền nghiệp vụ nhưng nâng rõ trải nghiệm dùng thử và độ sẵn sàng demo:
+- đăng nhập, đăng xuất, quên mật khẩu, đổi mật khẩu
+- phân quyền `ADMIN / LECTURER / STUDENT`
+- quản trị khoa, ngành, lớp sinh hoạt, học kỳ, phòng học
+- quản trị môn học, môn tiên quyết, học phần mở, phân công giảng dạy
+- quản trị sinh viên, giảng viên, import CSV sinh viên
+- quản trị lịch học, kiểm tra trùng phòng ở DB layer
+- đăng ký và hủy đăng ký học phần bằng RPC server-side
+- nhập điểm, duyệt điểm, khóa điểm, xử lý phúc khảo
+- báo cáo tổng hợp và audit log
 
-- làm mới design system theo nền sáng, màu trung tính + màu nhấn chính + màu trạng thái
-- chuẩn hóa màu cho `badge`, `button`, `card`, `table`, `form`, `alert`
-- thêm `loading`, `empty`, `error`, `success` states ở các màn hình quan trọng
-- làm giàu dashboard admin, student enrollment, lecturer gradebook và các màn hình quản trị chính
-- siết lại một số CRUD để thao tác thật với Supabase an toàn hơn
-- bổ sung rollback khi tạo user/profile thất bại ở module sinh viên và giảng viên
-- bổ sung xóa an toàn cho `courses` và `course_offerings`
-- giữ demo data tách biệt hoàn toàn khỏi dữ liệu live bằng `is_demo + demo_batch`
-
-### Màu và trạng thái
-
-Hệ thống dùng nhóm màu semantic thay vì tô màu ngẫu nhiên:
-
-- `primary`: hành động chính, điều hướng chính
-- `success`: hoàn tất, approved, active
-- `warning`: draft, submitted, pending
-- `info`: open, enrolled, under review
-- `danger`: rejected, cancelled, thao tác xóa
-- `neutral`: locked, closed, inactive
-
-## Tính năng chính
-
-### Auth và hồ sơ
-
-- đăng nhập, đăng xuất
-- quên mật khẩu, đổi mật khẩu
-- phân vai `ADMIN / LECTURER / STUDENT`
-- hồ sơ cá nhân theo từng role
-
-### Master data
-
-- khoa
-- ngành
-- lớp sinh hoạt
-- học kỳ
-- phòng học
-- môn học
-- môn tiên quyết
-- học phần mở
-- phân công giảng dạy
-
-### Sinh viên và giảng viên
-
-- admin tạo/sửa sinh viên
-- import sinh viên từ CSV
-- admin tạo/sửa giảng viên
-- trạng thái tài khoản và trạng thái học tập tách riêng
-
-### Thời khóa biểu và đăng ký học phần
-
-- mở học phần theo học kỳ
-- tạo lịch học và gán phòng
-- kiểm tra trùng lịch ở DB layer
-- đăng ký/hủy đăng ký học phần bằng RPC server-side
-- kiểm tra:
-  - trùng lịch
-  - quá số tín chỉ
-  - thiếu môn tiên quyết
-  - quá sĩ số
-  - ngoài thời gian đăng ký
-
-### Điểm và phúc khảo
-
-- giảng viên nhập điểm thành phần
-- giảng viên gửi duyệt bảng điểm
-- admin duyệt / khóa / mở khóa điểm
-- sinh viên xem GPA và bảng điểm cá nhân
-- sinh viên gửi phúc khảo
-- giảng viên và admin xử lý phúc khảo
-- lưu lịch sử thay đổi điểm trong `grade_change_logs`
-
-### Báo cáo và audit
-
-- thống kê sinh viên theo khoa/ngành/lớp
-- tỷ lệ đạt theo môn
-- GPA trung bình theo lớp
-- cảnh báo học vụ
-- audit log cho thao tác quan trọng
-
-## Kiến trúc thư mục
+### 1.3 Cấu trúc chính của repo
 
 ```text
 sms-app/
+├─ docs/
 ├─ scripts/
-│  ├─ demo-utils.ts
+│  ├─ bootstrap-admin.ts
 │  ├─ demo-seed.ts
-│  ├─ seed-demo.ts
-│  └─ reset-demo.ts
+│  ├─ demo-utils.ts
+│  ├─ reset-demo.ts
+│  └─ seed-demo.ts
 ├─ src/
 │  ├─ app/
-│  │  ├─ (auth)/
-│  │  ├─ (protected)/
-│  │  │  ├─ admin/
-│  │  │  ├─ lecturer/
-│  │  │  └─ student/
-│  │  └─ auth/callback/
 │  ├─ components/
-│  │  ├─ app-shell/
-│  │  ├─ auth/
-│  │  ├─ dashboard/
-│  │  ├─ data-table/
-│  │  ├─ forms/
-│  │  ├─ shared/
-│  │  └─ ui/
 │  ├─ features/
-│  │  ├─ auth/
-│  │  ├─ departments/
-│  │  ├─ majors/
-│  │  ├─ academic-classes/
-│  │  ├─ students/
-│  │  ├─ lecturers/
-│  │  ├─ semesters/
-│  │  ├─ rooms/
-│  │  ├─ courses/
-│  │  ├─ course-offerings/
-│  │  ├─ schedules/
-│  │  ├─ enrollments/
-│  │  ├─ grades/
-│  │  ├─ admin-grades/
-│  │  ├─ regrades/
-│  │  ├─ reports/
-│  │  └─ audit-logs/
 │  ├─ lib/
-│  │  ├─ auth/
-│  │  ├─ constants/
-│  │  ├─ demo/
-│  │  ├─ supabase/
-│  │  └─ *.ts
 │  └─ types/
 ├─ supabase/
-│  └─ migrations/
-│     └─ 0001_init_sms.sql
-└─ .env.example
+│  ├─ migrations/
+│  │  ├─ 0001_init_sms.sql
+│  │  ├─ 0002_authz_hardening.sql
+│  │  └─ 0003_fix_schedule_room_overlap.sql
+│  └─ seed.sql
+├─ .env.example
+└─ package.json
 ```
 
-## Database
+## 2. Yêu cầu hệ thống
 
-Migration chính nằm tại:
+- Node.js 20+ khuyến nghị
+- npm
+- 1 project Supabase mới hoặc database test sạch
+- quyền truy cập Supabase SQL Editor
+- tùy chọn: Supabase CLI nếu bạn muốn push migration bằng CLI
 
-- [supabase/migrations/0001_init_sms.sql](/D:/Project/Hệ%20thống%20quản%20lý%20sinh%20viên/sms-app/supabase/migrations/0001_init_sms.sql)
+## 3. Biến môi trường
 
-Schema bao gồm các nhóm bảng chính:
-
-- `roles`
-- `profiles`
-- `students`
-- `lecturers`
-- `departments`
-- `majors`
-- `academic_classes`
-- `semesters`
-- `courses`
-- `course_prerequisites`
-- `course_offerings`
-- `teaching_assignments`
-- `rooms`
-- `schedules`
-- `enrollments`
-- `grades`
-- `grade_change_logs`
-- `regrade_requests`
-- `audit_logs`
-
-### Nguyên tắc nghiệp vụ dữ liệu
-
-- điểm gắn với `enrollment`, không gắn trực tiếp với `student + course`
-- `course_offering` là học phần mở theo học kỳ
-- `teaching_assignments` xác định giảng viên nào được nhập điểm cho học phần nào
-- `register_enrollment()` và `cancel_enrollment()` là RPC để khóa nghiệp vụ nhạy cảm ở DB layer
-- trigger ở bảng `grades` tự tính:
-  - `total_score`
-  - `letter_grade`
-  - `gpa_value`
-- trigger chuyển trạng thái điểm chặn sai workflow
-
-## RLS và bảo mật
-
-Migration đã bật RLS cho các bảng chính.
-
-Các nguyên tắc hiện tại:
-
-- student chỉ xem dữ liệu của chính mình
-- lecturer chỉ xem dữ liệu của học phần được phân công
-- admin có toàn quyền quản trị
-- audit log chỉ admin đọc
-- regrade insert chỉ hợp lệ khi:
-  - đúng sinh viên sở hữu bản ghi
-  - điểm thuộc trạng thái `APPROVED` hoặc `LOCKED`
-  - đang nằm trong khoảng thời gian phúc khảo của học kỳ
-
-## Cấu hình môi trường
-
-Tạo file `.env.local` từ `.env.example`.
+Tạo `.env.local` từ `.env.example`.
 
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -236,263 +86,332 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 DEMO_BATCH=sms-demo-2026
 ```
 
-### Lưu ý
+### 3.1 Ý nghĩa từng biến
 
-- `NEXT_PUBLIC_APP_URL` dùng cho flow reset password
-- `SUPABASE_SERVICE_ROLE_KEY` chỉ dùng cho script seed/reset và server-side helper đặc biệt
-- nếu thiếu các biến này, `next build` sẽ fail ngay từ lúc collect config
+| Biến | Bắt buộc | Mục đích |
+| --- | --- | --- |
+| `NEXT_PUBLIC_APP_URL` | Có | URL gốc của ứng dụng, dùng trong auth callback và reset password |
+| `NEXT_PUBLIC_SUPABASE_URL` | Có | URL project Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Có | Public anon key cho app |
+| `SUPABASE_SERVICE_ROLE_KEY` | Có cho bootstrap admin và demo scripts | Dùng cho các tác vụ quản trị hệ thống ngoài giao diện |
+| `DEMO_BATCH` | Có khi dùng demo scripts | Marker để seed/reset đúng batch demo |
 
-## Cài đặt local
+### 3.2 Lưu ý trên Windows PowerShell
 
-### 1. Cài dependency
+Nếu PowerShell chặn `npm.ps1`, dùng `npm.cmd` thay cho `npm`.
+
+Ví dụ:
+
+```bash
+npm.cmd install
+npm.cmd run dev
+```
+
+## 4. Dựng hệ thống từ đầu
+
+### Bước 1: cài dependency
 
 ```bash
 npm install
 ```
 
-### 2. Tạo project Supabase
+### Bước 2: tạo project Supabase
 
-1. Tạo một project mới trên Supabase.
+Trong Supabase:
+
+1. Tạo project mới.
 2. Lấy:
    - Project URL
    - anon key
    - service role key
-3. Điền vào `.env.local`.
+3. Điền các giá trị đó vào `.env.local`.
 
-### 3. Chạy migration
+### Bước 3: chạy migration database
 
-Có thể dùng Supabase CLI hoặc chạy SQL trực tiếp trong SQL Editor.
+Chạy đúng thứ tự:
 
-Ví dụ với CLI:
+1. `supabase/migrations/0001_init_sms.sql`
+2. `supabase/migrations/0002_authz_hardening.sql`
+3. `supabase/migrations/0003_fix_schedule_room_overlap.sql`
+
+Bạn có 2 cách:
+
+#### Cách A: dùng Supabase CLI
 
 ```bash
 supabase link --project-ref <your-project-ref>
 supabase db push
 ```
 
-Hoặc copy toàn bộ nội dung file migration và chạy trong SQL Editor:
+#### Cách B: dùng SQL Editor
 
-- [supabase/migrations/0001_init_sms.sql](/D:/Project/Hệ%20thống%20quản%20lý%20sinh%20viên/sms-app/supabase/migrations/0001_init_sms.sql)
+Mở SQL Editor và chạy từng file migration theo đúng thứ tự trên.
 
-### 4. Cấu hình Auth redirect
+`0003_fix_schedule_room_overlap.sql` là migration sửa ràng buộc trùng phòng theo cả khung ngày hiệu lực, nên bắt buộc có khi setup hệ thống mới.
 
-Trong Supabase Auth:
+### Bước 4: cấu hình Supabase Auth
 
-- Site URL: `NEXT_PUBLIC_APP_URL`
-- Redirect URL cần có:
+Trong `Authentication > URL Configuration`:
+
+- `Site URL`: `http://localhost:3000`
+- `Redirect URLs`:
   - `http://localhost:3000/auth/callback`
+  - `http://localhost:3000/**`
 
-### 5. Chạy ứng dụng
+Nếu bạn deploy ở môi trường khác, `Site URL` và `Redirect URLs` phải đổi theo domain thực tế của môi trường đó.
+
+## 5. Tạo tài khoản admin riêng
+
+Đây là cách khởi tạo được khuyến nghị cho hệ thống thật. Bạn không cần dùng tài khoản mẫu hoặc seed demo nếu mục tiêu là tự vận hành hệ thống bằng tài khoản của mình.
+
+### 5.1 Cách khuyến nghị: bootstrap bằng script
+
+Repo hiện có script chính thức để tạo tài khoản admin đầu tiên:
+
+```bash
+npm run admin:bootstrap -- --email admin@your-domain.com --password "StrongPassword123!" --full-name "System Administrator"
+```
+
+Ví dụ trên Windows PowerShell:
+
+```bash
+npm.cmd run admin:bootstrap -- --email admin@your-domain.com --password "StrongPassword123!" --full-name "System Administrator"
+```
+
+Tùy chọn thêm:
+
+- `--phone 0900000000`
+- `--must-change-password true`
+
+Ví dụ đầy đủ:
+
+```bash
+npm run admin:bootstrap -- --email admin@company.com --password "StrongPassword123!" --full-name "Nguyen Van A" --phone 0900000000 --must-change-password true
+```
+
+Script sẽ:
+
+- tạo user trong `auth.users`
+- tạo profile tương ứng trong `public.profiles`
+- gán `role_code = 'ADMIN'`
+- gán `status = 'ACTIVE'`
+
+### 5.2 Khi nào nên dùng cách này
+
+Dùng `admin:bootstrap` khi:
+
+- bạn vừa tạo project Supabase mới
+- database chưa có admin thật
+- bạn muốn đăng nhập bằng tài khoản riêng thay vì tài khoản seed
+- bạn chuẩn bị vận hành staging hoặc production
+
+### 5.3 Cách thủ công nếu không dùng script
+
+1. Vào `Supabase > Authentication > Users`.
+2. Tạo một user email/password mới.
+3. Lấy `id` của user vừa tạo.
+4. Chạy SQL sau trong SQL Editor:
+
+```sql
+insert into public.profiles (
+  id,
+  email,
+  full_name,
+  role_code,
+  status,
+  must_change_password,
+  metadata
+)
+values (
+  '<AUTH_USER_ID>',
+  'admin@your-domain.com',
+  'System Administrator',
+  'ADMIN',
+  'ACTIVE',
+  true,
+  jsonb_build_object('source', 'manual-bootstrap')
+);
+```
+
+Không tạo bản ghi trong `public.profiles` thì user sẽ đăng nhập được về mặt Auth nhưng không vào được hệ thống vì middleware và session layer đọc quyền từ bảng `profiles`.
+
+### 5.4 Khuyến nghị sau khi tạo admin
+
+- đăng nhập bằng tài khoản admin vừa tạo
+- vào `/profile`
+- đổi mật khẩu ngay nếu bạn dùng mật khẩu bootstrap tạm thời
+- dùng tài khoản admin này để cấu hình các dữ liệu nền thay vì dựa vào tài khoản demo
+
+## 6. Chọn chiến lược dữ liệu ban đầu
+
+Sau khi đã có admin riêng, bạn cần quyết định database sẽ ở chế độ nào.
+
+### 6.1 Chế độ A: hệ thống sạch cho vận hành thật
+
+Khuyến nghị cho:
+
+- local development nghiêm túc
+- staging gần production
+- production
+
+Thực hiện:
+
+- chạy migration
+- bootstrap admin riêng
+- không chạy `supabase/seed.sql`
+- không chạy `npm run seed:demo`
+
+Sau đó đăng nhập bằng admin và nhập dữ liệu nền từ giao diện quản trị.
+
+### 6.2 Chế độ B: seed dữ liệu ICTU đầy đủ bằng SQL
+
+Phù hợp khi bạn cần dataset đầy đủ để demo nghiệp vụ theo kịch bản có sẵn.
+
+Chạy toàn bộ file:
+
+- `supabase/seed.sql`
+
+Đặc điểm:
+
+- script tự dọn batch `ictu-seed-2026` trước khi seed lại
+- tạo luôn dữ liệu auth, hồ sơ và dữ liệu nghiệp vụ
+- tất cả tài khoản trong bộ seed SQL dùng chung mật khẩu `Ictu@2026Seed`
+
+Tài khoản nhanh:
+
+- Admin: `daotao.admin@ictu.edu.vn`
+- Lecturer: `pham.hung@ictu.edu.vn`
+- Student: `dtc237340405001@st.ictu.edu.vn`
+
+### 6.3 Chế độ C: seed batch demo bằng script TypeScript
+
+Phù hợp khi bạn cần dataset demo nhẹ hơn và có thể reset bằng command local.
+
+```bash
+npm run seed:demo
+```
+
+Reset và seed lại:
+
+```bash
+npm run reset:demo
+npm run seed:demo
+```
+
+Đặc điểm:
+
+- yêu cầu `SUPABASE_SERVICE_ROLE_KEY`
+- dữ liệu được đánh dấu bằng `is_demo = true` và `demo_batch = DEMO_BATCH`
+- tất cả tài khoản demo dùng chung mật khẩu `Demo@123456`
+
+Tài khoản nhanh:
+
+- Admin: `admin.demo@sms.local`
+- Lecturer: `ha.nguyen@sms.local`
+- Student: `se22001@sms.local`
+
+### 6.4 Quy tắc bắt buộc
+
+Không nên trộn các chiến lược dữ liệu trên cùng một database nếu bạn không chủ động quản lý rõ mục đích của từng batch.
+
+Khuyến nghị:
+
+- production: chỉ bootstrap admin riêng, không seed dữ liệu mẫu
+- staging demo: chọn một trong hai cách seed
+- local: có thể chọn seed hoặc để database sạch tùy mục tiêu phát triển
+
+## 7. Chạy ứng dụng local
 
 ```bash
 npm run dev
 ```
 
-## Seed demo data
+Truy cập:
 
-Demo data chỉ nằm ở layer `scripts`.
+- `http://localhost:3000`
 
-- UI không hard-code tài khoản mẫu hoặc record demo để render.
-- `scripts/seed-demo.ts` là entry script để seed demo data.
-- `scripts/demo-seed.ts` chứa toàn bộ logic và dataset seed.
-- `scripts/reset-demo.ts` là entry script để xóa demo data.
-- `scripts/demo-utils.ts` chứa helper service-role, marker `is_demo/demo_batch` và reset an toàn theo batch.
+## 8. Kiểm tra chất lượng
 
-### Seed
+Các lệnh chính thức:
 
 ```bash
+npm run lint
+npm run typecheck
+npm run check
+```
+
+## 9. Scripts chính thức
+
+```bash
+npm run admin:bootstrap
 npm run seed:demo
-```
-
-Script seed sẽ:
-
-- xóa demo batch cũ trước khi seed lại
-- tạo demo users trong `auth.users`
-- tạo `profiles`, `students`, `lecturers`
-- tạo master data
-- tạo offerings, schedules, enrollments, grades
-- tạo phúc khảo, grade history, audit log mẫu
-
-### Reset demo
-
-```bash
 npm run reset:demo
-```
-
-Script reset sẽ:
-
-- chỉ xóa các row có `is_demo = true` và `demo_batch = <DEMO_BATCH>`
-- kiểm tra batch đang reset không lẫn dữ liệu live dùng cùng `demo_batch`
-- xóa theo đúng thứ tự quan hệ
-- xóa luôn auth users của batch demo
-
-### Luồng dùng khuyến nghị
-
-```bash
-npm run reset:demo
-npm run seed:demo
-```
-
-Luồng này giúp làm sạch batch demo trước khi tạo lại dữ liệu mẫu mới.
-
-### Quy tắc an toàn khi reset demo
-
-- chỉ reset những bản ghi mang đúng `is_demo = true`
-- chỉ reset đúng `demo_batch` đang cấu hình trong env
-- không reset dữ liệu live ngay cả khi cùng schema
-- không có demo record nào được hard-code trực tiếp trong UI
-
-## Chiến lược demo data
-
-Tất cả dữ liệu demo được đánh dấu bằng:
-
-- `is_demo = true`
-- `demo_batch = <DEMO_BATCH>`
-
-Điều này giúp:
-
-- seed lại nhiều lần mà không đụng dữ liệu thật
-- xóa đúng batch demo trước khi deploy hoặc chuyển sang dùng thật
-- kiểm tra nhanh dữ liệu demo/live trong báo cáo và audit log
-- cô lập toàn bộ demo data trong script thay vì rải trong app/UI
-
-### Ngoại lệ
-
-`course_prerequisites` không có cột `is_demo`/`demo_batch`.
-
-Vì vậy script reset xử lý riêng:
-
-- xóa các quan hệ tiên quyết có liên quan đến demo courses
-- sau đó mới xóa demo courses
-
-## Demo accounts mặc định
-
-Sau khi chạy `npm run seed:demo`, có thể dùng nhanh:
-
-- Admin: `admin.demo@sms.local` / `Demo@123456`
-- Lecturer: `ha.nguyen@sms.local` / `Demo@123456`
-- Student: `se22001@sms.local` / `Demo@123456`
-
-Một số tài khoản bổ sung:
-
-- `linh.pham@sms.local`
-- `huy.vo@sms.local`
-- `se22002@sms.local`
-- `se22003@sms.local`
-- `ds23001@sms.local`
-- `fin23001@sms.local`
-
-Tất cả dùng chung mật khẩu demo: `Demo@123456`
-
-## Kịch bản test nhanh sau khi seed
-
-Sau khi chạy seed demo, có thể kiểm tra nhanh theo thứ tự này:
-
-### 1. Admin dashboard
-
-- đăng nhập bằng tài khoản admin demo
-- vào `/admin`
-- kiểm tra các stat card, quick links, vùng cảnh báo vận hành
-- mở các module `students`, `lecturers`, `courses`, `offerings`, `reports`
-
-### 2. Students CRUD
-
-- vào `/admin/students`
-- tạo một sinh viên mới
-- sửa lại trạng thái truy cập hoặc trạng thái học tập
-- import thử CSV bằng form import
-- kiểm tra danh sách đã lọc được theo `q`, lớp, trạng thái
-
-### 3. Lecturers CRUD
-
-- vào `/admin/lecturers`
-- tạo hoặc cập nhật một giảng viên
-- kiểm tra bộ lọc theo khoa và trạng thái
-
-### 4. Courses CRUD
-
-- vào `/admin/courses`
-- tạo một môn học mới
-- cập nhật số tín chỉ hoặc môn tiên quyết
-- thử xóa một môn học không có học phần mở
-- kiểm tra hệ thống chặn xóa khi môn đang bị dùng làm tiên quyết hoặc đã có offering
-
-### 5. Course offerings CRUD
-
-- vào `/admin/offerings`
-- mở một học phần mới
-- gán giảng viên chính
-- thử xóa một học phần chưa có enrollment
-- kiểm tra hệ thống chặn xóa nếu học phần đã có đăng ký
-
-### 6. Enrollment flow
-
-- đăng nhập bằng student demo
-- vào `/student/enrollments`
-- đăng ký một học phần còn chỗ
-- kiểm tra thông báo lỗi nếu vi phạm trùng lịch / tín chỉ / điều kiện đăng ký
-- hủy đăng ký trong thời gian cho phép
-
-### 7. Grades flow
-
-- đăng nhập lecturer demo
-- vào lớp học phần được phân công
-- lưu điểm thành phần ở trạng thái `DRAFT`
-- gửi duyệt bảng điểm
-- đăng nhập admin và vào `/admin/grades`
-- duyệt hoặc khóa điểm
-- đăng nhập student và kiểm tra bảng điểm cá nhân
-
-### 8. Reports
-
-- vào `/admin/reports`
-- kiểm tra số lượng sinh viên theo khoa/ngành/lớp
-- kiểm tra GPA trung bình, tỷ lệ đạt, danh sách cảnh báo học vụ
-
-## Scripts hữu ích
-
-```bash
 npm run dev
 npm run lint
 npm run typecheck
 npm run check
-npm run seed:demo
-npm run reset:demo
 ```
 
-## Kiểm tra chất lượng
+## 10. Vận hành dữ liệu demo
 
-Đã kiểm tra:
+### 10.1 File liên quan
 
-- `npm run typecheck`
-- `npm run lint`
-- `npm run build` khi env Supabase hợp lệ
+- `scripts/bootstrap-admin.ts`: bootstrap admin thật
+- `scripts/seed-demo.ts`: entry point seed demo
+- `scripts/demo-seed.ts`: dataset và logic seed demo
+- `scripts/reset-demo.ts`: reset demo batch
+- `scripts/demo-utils.ts`: helper cho service role và demo markers
 
-`npm run build` hiện chỉ chạy tiếp được khi đã cấu hình đầy đủ biến môi trường Supabase trong `.env.local`.
+### 10.2 Nguyên tắc reset demo
 
-## Deploy
+- chỉ xóa row có `is_demo = true`
+- chỉ xóa đúng `demo_batch` đang cấu hình
+- có kiểm tra tránh xóa nhầm dữ liệu live dùng cùng batch marker
 
-Khuyến nghị:
+## 11. Lộ trình setup khuyến nghị theo từng môi trường
 
-- deploy frontend trên Vercel
-- dùng Supabase managed Postgres/Auth
+### 11.1 Local phát triển có dữ liệu mẫu
 
-Hướng dẫn step-by-step chi tiết:
+1. tạo project Supabase mới
+2. cấu hình `.env.local`
+3. chạy migration
+4. chọn `supabase/seed.sql` hoặc `npm run seed:demo`
+5. chạy app
 
-- [docs/VERCEL_SETUP_GUIDE.md](/D:/Project/Hệ%20thống%20quản%20lý%20sinh%20viên/sms-app/docs/VERCEL_SETUP_GUIDE.md)
+### 11.2 Local hoặc staging gần production
 
-Checklist deploy:
+1. tạo project Supabase mới
+2. cấu hình `.env.local`
+3. chạy migration
+4. chạy `npm run admin:bootstrap`
+5. không seed dữ liệu mẫu
+6. đăng nhập bằng admin riêng và nhập dữ liệu nền thật
 
-1. tạo project production trên Supabase
+### 11.3 Production
+
+1. tạo project Supabase production riêng
 2. chạy migration production
-3. cấu hình env trên Vercel
-4. cập nhật Supabase Auth redirect URLs
-5. không chạy `seed:demo` trên production nếu không muốn dữ liệu demo
+3. bootstrap admin riêng
+4. cấu hình env trên Vercel
+5. cập nhật Supabase Auth redirect URLs theo domain production
+6. không chạy seed demo nếu không thực sự cần dữ liệu mẫu
 
-## Hướng mở rộng tiếp theo
+## 12. Deploy
 
-- thêm bulk import/export mạnh hơn cho sinh viên, giảng viên, điểm
-- thêm filter/phân trang server-side cho bảng lớn
-- thêm dashboard chi tiết theo học kỳ hiện tại
-- thêm workflow mở khóa điểm có lý do và log chi tiết hơn
-- thêm kiểm thử integration cho RPC đăng ký học phần và workflow điểm
+Hướng dẫn deploy riêng nằm tại:
+
+- [docs/VERCEL_SETUP_GUIDE.md](./docs/VERCEL_SETUP_GUIDE.md)
+
+## 13. Những điểm cần nhớ
+
+- Quyền truy cập của hệ thống đọc từ `public.profiles`, không chỉ từ Supabase Auth.
+- Tài khoản admin đầu tiên nên được tạo bằng `npm run admin:bootstrap`.
+- `0003_fix_schedule_room_overlap.sql` là một phần của setup chuẩn hiện tại.
+- Không dùng tài khoản demo cho production.
+- Không trộn `supabase/seed.sql` và `seed:demo` nếu không thực sự chủ ý quản lý hai dataset khác nhau.
+
+## 14. Tài liệu người dùng
+
+Bộ tài liệu hướng dẫn sử dụng cho từng nhóm người dùng nằm tại:
+
+- [docs/user-guides/README.md](./docs/user-guides/README.md)

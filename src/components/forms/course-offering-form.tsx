@@ -36,7 +36,7 @@ import {
   type CourseOfferingInput,
 } from "@/features/course-offerings/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import type { CourseOfferingRecord } from "@/features/course-offerings/queries";
 import type { FormMode, SelectOption } from "@/types/forms";
 

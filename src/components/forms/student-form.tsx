@@ -32,7 +32,7 @@ import {
 import { upsertStudentAction } from "@/features/students/actions";
 import { studentSchema, type StudentInput } from "@/features/students/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import { mapOptions } from "@/lib/options";
 import type { AcademicClass } from "@/types/app";
 import type { StudentRecord } from "@/features/students/queries";

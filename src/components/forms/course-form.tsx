@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import { mapOptions } from "@/lib/options";
 import { upsertCourseAction } from "@/features/courses/actions";
 import { courseSchema, type CourseInput } from "@/features/courses/schemas";

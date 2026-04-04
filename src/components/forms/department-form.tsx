@@ -35,7 +35,7 @@ import {
   type DepartmentInput,
 } from "@/features/departments/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import type { Department } from "@/types/app";
 import type { FormMode } from "@/types/forms";
 

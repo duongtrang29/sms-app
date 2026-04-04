@@ -15,7 +15,7 @@ import {
   type ResetPasswordInput,
 } from "@/features/auth/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 
 export function ResetPasswordForm() {
   const [state, submitAction] = useActionState(

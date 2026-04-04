@@ -15,7 +15,7 @@ import {
   type ForgotPasswordInput,
 } from "@/features/auth/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 
 export function ForgotPasswordForm() {
   const [state, submitAction] = useActionState(

@@ -35,7 +35,7 @@ import {
   type AcademicClassInput,
 } from "@/features/academic-classes/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import { mapOptions } from "@/lib/options";
 import type { AcademicClass, Major } from "@/types/app";
 import type { FormMode } from "@/types/forms";

@@ -12,7 +12,7 @@ import { SubmitButton } from "@/components/forms/submit-button";
 import { loginAction } from "@/features/auth/actions";
 import { loginSchema, type LoginInput } from "@/features/auth/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 
 type LoginFormProps = {
   initialMessage?: string | undefined;

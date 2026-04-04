@@ -31,7 +31,7 @@ import {
 import { upsertSemesterAction } from "@/features/semesters/actions";
 import { semesterSchema, type SemesterInput } from "@/features/semesters/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import type { Semester } from "@/types/app";
 import type { FormMode } from "@/types/forms";
 

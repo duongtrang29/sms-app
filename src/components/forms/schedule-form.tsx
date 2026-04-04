@@ -36,7 +36,7 @@ import {
   type ScheduleInput,
 } from "@/features/schedules/schemas";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import type { Schedule } from "@/types/app";
 import type { FormMode, SelectOption } from "@/types/forms";
 

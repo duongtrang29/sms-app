@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { initialActionState } from "@/lib/actions";
-import { useApplyServerFormErrors } from "@/lib/form-errors";
+import { useApplyServerFormErrors } from "@/lib/form-errors-client";
 import { upsertRoomAction } from "@/features/rooms/actions";
 import { roomSchema, type RoomInput } from "@/features/rooms/schemas";
 import type { Room } from "@/types/app";
