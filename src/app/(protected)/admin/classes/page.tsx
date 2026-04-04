@@ -1,19 +1,23 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { PlusIcon, UsersIcon } from "lucide-react";
 
 import { AcademicClassesTable } from "@/components/dashboard/academic-classes-table";
 import { FormAlert } from "@/components/forms/form-alert";
 import { AcademicClassForm } from "@/components/forms/academic-class-form";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { Button } from "@/components/ui/button";
 import { getAcademicClassById, listAcademicClasses } from "@/features/academic-classes/queries";
 import { listMajors } from "@/features/majors/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 
 type AcademicClassesPageProps = {
@@ -32,17 +36,12 @@ async function AcademicClassEditorCard({
   const academicClass = editId ? await getAcademicClassById(editId) : null;
 
   return (
-    <FormPanelCard
-      description="Biểu mẫu lớp sinh hoạt sẽ tự động điền sẵn dữ liệu khi chuyển sang chế độ sửa."
-      title={academicClass ? "Cập nhật lớp" : "Tạo lớp mới"}
-    >
-      <AcademicClassForm
-        academicClass={academicClass}
-        key={`academic-class-form-${editId ?? "create"}`}
-        majors={majors}
-        returnTo={returnTo}
-      />
-    </FormPanelCard>
+    <AcademicClassForm
+      academicClass={academicClass}
+      key={`academic-class-form-${editId ?? "create"}`}
+      majors={majors}
+      returnTo={returnTo}
+    />
   );
 }
 
@@ -57,6 +56,7 @@ export default async function AcademicClassesPage({
   const query = queryValue.toLowerCase();
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
   const success = getSearchParamString(resolvedSearchParams, "success");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
 
   const [majors, academicClasses] = await Promise.all([
     listMajors(),
@@ -105,29 +105,29 @@ export default async function AcademicClassesPage({
     ["major", majorFilter],
     ["status", statusFilter],
   ]);
+  const isCreateOpen = mode === "create";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
-              </Button>
-            </Link>
-          ) : null
+          <Link href={buildCreatePath(returnTo)}>
+            <Button type="button">
+              <PlusIcon data-icon="inline-start" />
+              Thêm mới
+            </Button>
+          </Link>
         }
-        description="Lớp sinh hoạt là đơn vị gắn sinh viên theo khóa, ngành và báo cáo học tập."
-        title="Quản lý lớp sinh hoạt"
+        description="Danh mục lớp sinh hoạt."
+        icon={<UsersIcon className="size-5" />}
+        info="Lớp sinh hoạt là đơn vị gắn sinh viên theo khóa, ngành và báo cáo học tập."
+        title="Lớp sinh hoạt"
       />
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
       ) : null}
-      <FormPanelCard
-        description="Lọc theo ngành, trạng thái và từ khóa để kiểm soát lớp sinh hoạt rõ ràng hơn."
-        title="Bộ lọc lớp sinh hoạt"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${majorFilter}|${statusFilter}`}
           searchPlaceholder="Tìm mã lớp, tên lớp, ngành"
@@ -150,9 +150,17 @@ export default async function AcademicClassesPage({
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.9fr)]">
-        <AcademicClassesTable data={rows} returnTo={returnTo} />
+      </SectionPanel>
+      <AcademicClassesTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={editId ? "Chỉnh sửa" : "Thêm mới"}
+        closeHref={returnTo}
+        description="Quản lý mã lớp, niên khóa, ngành và trạng thái hoạt động."
+        icon={<UsersIcon className="size-5" />}
+        open={isEditorOpen}
+        title={editId ? "Cập nhật lớp" : "Thêm lớp"}
+        variant="dialog"
+      >
         <Suspense
           fallback={<FormCardSkeleton sections={2} title="Đang tải biểu mẫu lớp" />}
           key={editId ?? "create"}
@@ -163,7 +171,7 @@ export default async function AcademicClassesPage({
             returnTo={returnTo}
           />
         </Suspense>
-      </div>
+      </RoutePanel>
     </div>
   );
 }

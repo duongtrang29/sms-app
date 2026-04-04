@@ -1,20 +1,29 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import {
+  PlusIcon,
+  ShieldCheckIcon,
+  UserRoundIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { LecturersTable } from "@/components/dashboard/lecturers-table";
 import { FormAlert } from "@/components/forms/form-alert";
 import { LecturerForm } from "@/components/forms/lecturer-form";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { listDepartments } from "@/features/departments/queries";
 import { getLecturerById, listLecturers } from "@/features/lecturers/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 
 type LecturersPageProps = {
@@ -33,17 +42,12 @@ async function LecturerEditorCard({
   const lecturer = editId ? await getLecturerById(editId) : null;
 
   return (
-    <FormPanelCard
-      description="Dữ liệu giảng viên sẽ được nạp lại đầy đủ khi bạn đổi bản ghi đang sửa."
-      title={lecturer ? "Cập nhật giảng viên" : "Tạo giảng viên mới"}
-    >
-      <LecturerForm
-        departments={departments}
-        key={`lecturer-form-${editId ?? "create"}`}
-        lecturer={lecturer}
-        returnTo={returnTo}
-      />
-    </FormPanelCard>
+    <LecturerForm
+      departments={departments}
+      key={`lecturer-form-${editId ?? "create"}`}
+      lecturer={lecturer}
+      returnTo={returnTo}
+    />
   );
 }
 
@@ -58,6 +62,7 @@ export default async function LecturersPage({
   const query = queryValue.toLowerCase();
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
   const success = getSearchParamString(resolvedSearchParams, "success");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
 
   const [departments, lecturers] = await Promise.all([
     listDepartments(),
@@ -113,22 +118,24 @@ export default async function LecturersPage({
     ["department", departmentFilter],
     ["status", statusFilter],
   ]);
+  const isCreateOpen = mode === "create";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
-              </Button>
-            </Link>
-          ) : null
+          <Link href={buildCreatePath(returnTo)}>
+            <Button type="button">
+              <PlusIcon data-icon="inline-start" />
+              Thêm mới
+            </Button>
+          </Link>
         }
-        description="Quản trị viên tạo tài khoản giảng viên và gắn về khoa chủ quản để phân công giảng dạy."
-        eyebrow="Khu quản trị"
-        title="Quản lý giảng viên"
+        description="Hồ sơ giảng viên & tài khoản truy cập."
+        icon={<UserRoundIcon className="size-5" />}
+        info="Quản trị viên tạo tài khoản giảng viên và gắn về khoa chủ quản để phân công giảng dạy."
+        title="Giảng viên"
       />
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
@@ -136,18 +143,21 @@ export default async function LecturersPage({
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           description="Tổng số giảng viên hiện có trong hệ thống."
+          icon={<UsersIcon className="size-4" />}
           label="Tổng giảng viên"
           tone="primary"
           value={allRows.length}
         />
         <StatCard
           description="Tài khoản giảng viên có thể đăng nhập."
+          icon={<ShieldCheckIcon className="size-4" />}
           label="Truy cập khả dụng"
           tone="success"
           value={allRows.filter((row) => row.status === "ACTIVE").length}
         />
         <StatCard
           description="Tài khoản đang bị khóa hoặc tạm ngưng."
+          icon={<UserRoundIcon className="size-4" />}
           label="Bị hạn chế"
           tone="warning"
           value={allRows.filter((row) => row.status !== "ACTIVE").length}
@@ -159,10 +169,7 @@ export default async function LecturersPage({
           value={rows.length}
         />
       </div>
-      <FormPanelCard
-        description="Lọc nhanh theo khoa chủ quản, trạng thái tài khoản và từ khóa."
-        title="Bộ lọc giảng viên"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${departmentFilter}|${statusFilter}`}
           searchPlaceholder="Tìm mã GV, họ tên, email, khoa"
@@ -186,9 +193,17 @@ export default async function LecturersPage({
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.9fr)]">
-        <LecturersTable data={rows} returnTo={returnTo} />
+      </SectionPanel>
+      <LecturersTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={editId ? "Chỉnh sửa" : "Thêm mới"}
+        closeHref={returnTo}
+        description="Quản lý hồ sơ giảng viên, khoa chủ quản và trạng thái tài khoản."
+        icon={<UserRoundIcon className="size-5" />}
+        open={isEditorOpen}
+        title={editId ? "Cập nhật giảng viên" : "Thêm giảng viên"}
+        variant="drawer"
+      >
         <Suspense
           fallback={<FormCardSkeleton sections={3} title="Đang tải hồ sơ giảng viên" />}
           key={editId ?? "create"}
@@ -199,7 +214,7 @@ export default async function LecturersPage({
             returnTo={returnTo}
           />
         </Suspense>
-      </div>
+      </RoutePanel>
     </div>
   );
 }

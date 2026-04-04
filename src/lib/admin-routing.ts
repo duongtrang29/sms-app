@@ -36,8 +36,25 @@ export function buildReturnPath(
   return buildPathWithUpdates(basePath, filters);
 }
 
+export function buildCreatePath(returnTo: string) {
+  return buildPathWithUpdates(returnTo, [
+    ["edit", null],
+    ["mode", "create"],
+  ]);
+}
+
 export function buildEditPath(returnTo: string, editId: string) {
-  return buildPathWithUpdates(returnTo, [["edit", editId]]);
+  return buildPathWithUpdates(returnTo, [
+    ["mode", null],
+    ["edit", editId],
+  ]);
+}
+
+export function buildImportPath(returnTo: string) {
+  return buildPathWithUpdates(returnTo, [
+    ["edit", null],
+    ["mode", "import"],
+  ]);
 }
 
 export function getSafeReturnPath(

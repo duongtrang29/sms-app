@@ -1,20 +1,24 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookOpenIcon, PlusIcon, Rows3Icon, ShieldCheckIcon } from "lucide-react";
 
 import { CoursesTable } from "@/components/dashboard/courses-table";
 import { CourseForm } from "@/components/forms/course-form";
 import { FormAlert } from "@/components/forms/form-alert";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { listDepartments } from "@/features/departments/queries";
 import { getCourseById, listCourses } from "@/features/courses/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 
 type CoursesPageProps = {
@@ -33,17 +37,12 @@ async function CourseEditorCard({
   const course = editId ? await getCourseById(editId) : null;
 
   return (
-    <FormPanelCard
-      description="Biểu mẫu môn học tự động điền sẵn đầy đủ khi sửa và giữ nguyên bố cục với các biểu mẫu còn lại."
-      title={course ? "Cập nhật môn học" : "Tạo môn học mới"}
-    >
-      <CourseForm
-        course={course}
-        key={`course-form-${editId ?? "create"}`}
-        departments={departments}
-        returnTo={returnTo}
-      />
-    </FormPanelCard>
+    <CourseForm
+      course={course}
+      key={`course-form-${editId ?? "create"}`}
+      departments={departments}
+      returnTo={returnTo}
+    />
   );
 }
 
@@ -56,11 +55,14 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
   const departmentFilter = getSearchParamString(resolvedSearchParams, "department");
   const success = getSearchParamString(resolvedSearchParams, "success");
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
   const returnTo = buildReturnPath("/admin/courses", [
     ["q", queryValue],
     ["department", departmentFilter],
     ["status", statusFilter],
   ]);
+  const isCreateOpen = mode === "create";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   const [departments, courses] = await Promise.all([
     listDepartments(),
@@ -114,33 +116,36 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
-              </Button>
-            </Link>
-          ) : null
+          <Link href={buildCreatePath(returnTo)}>
+            <Button type="button">
+              <PlusIcon data-icon="inline-start" />
+              Thêm mới
+            </Button>
+          </Link>
         }
-        description="Quản lý môn học gốc để mở nhiều học phần theo từng học kỳ."
-        eyebrow="Khu quản trị"
-        title="Quản lý môn học"
+        description="Danh mục môn học gốc."
+        icon={<BookOpenIcon className="size-5" />}
+        info="Quản lý môn học gốc để mở nhiều học phần theo từng học kỳ."
+        title="Môn học"
       />
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           description="Tổng danh mục môn học hiện có."
+          icon={<BookOpenIcon className="size-4" />}
           label="Tổng môn học"
           tone="primary"
           value={allRows.length}
         />
         <StatCard
           description="Môn học đang còn hiệu lực để mở học phần."
+          icon={<ShieldCheckIcon className="size-4" />}
           label="Đang hiệu lực"
           tone="success"
           value={allRows.filter((row) => row.is_active).length}
         />
         <StatCard
           description="Số tín chỉ trung bình trên danh mục đang hiển thị."
+          icon={<Rows3Icon className="size-4" />}
           label="Tín chỉ trung bình"
           tone="info"
           value={
@@ -159,10 +164,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
       ) : null}
-      <FormPanelCard
-        description="Lọc theo khoa, trạng thái và từ khóa. Đường dẫn trang luôn phản ánh đúng bộ lọc hiện tại."
-        title="Bộ lọc môn học"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${departmentFilter}|${statusFilter}`}
           searchPlaceholder="Tìm mã môn, tên môn, khoa"
@@ -185,9 +187,18 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.9fr)]">
-        <CoursesTable data={rows} returnTo={returnTo} />
+      </SectionPanel>
+      <CoursesTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={editId ? "Chỉnh sửa" : "Thêm mới"}
+        closeHref={returnTo}
+        description="Quản lý thông tin môn học, tín chỉ và khoa phụ trách."
+        icon={<BookOpenIcon className="size-5" />}
+        open={isEditorOpen}
+        size="xl"
+        title={editId ? "Cập nhật môn học" : "Thêm môn học"}
+        variant="dialog"
+      >
         <Suspense
           fallback={<FormCardSkeleton sections={3} title="Đang tải biểu mẫu môn học" />}
           key={editId ?? "create"}
@@ -198,7 +209,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
             returnTo={returnTo}
           />
         </Suspense>
-      </div>
+      </RoutePanel>
     </div>
   );
 }

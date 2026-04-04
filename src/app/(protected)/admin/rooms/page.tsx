@@ -1,18 +1,22 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { DoorOpenIcon, PlusIcon } from "lucide-react";
 
 import { RoomsTable } from "@/components/dashboard/rooms-table";
 import { FormAlert } from "@/components/forms/form-alert";
 import { RoomForm } from "@/components/forms/room-form";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { Button } from "@/components/ui/button";
 import { getRoomById, listRooms } from "@/features/rooms/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 
 type RoomsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -28,12 +32,7 @@ async function RoomEditorCard({
   const room = editId ? await getRoomById(editId) : null;
 
   return (
-    <FormPanelCard
-      description="Chuẩn hóa phòng học giúp gán lịch và kiểm tra trùng phòng chính xác."
-      title={room ? "Cập nhật phòng học" : "Tạo phòng học mới"}
-    >
-      <RoomForm key={`room-form-${editId ?? "create"}`} returnTo={returnTo} room={room} />
-    </FormPanelCard>
+    <RoomForm key={`room-form-${editId ?? "create"}`} returnTo={returnTo} room={room} />
   );
 }
 
@@ -45,6 +44,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const query = queryValue.toLowerCase();
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
   const success = getSearchParamString(resolvedSearchParams, "success");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
   const rooms = await listRooms();
   const rows = rooms.filter((room) => {
     if (
@@ -70,29 +70,29 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
     ["q", queryValue],
     ["status", statusFilter],
   ]);
+  const isCreateOpen = mode === "create";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
-              </Button>
-            </Link>
-          ) : null
+          <Link href={buildCreatePath(returnTo)}>
+            <Button type="button">
+              <PlusIcon data-icon="inline-start" />
+              Thêm mới
+            </Button>
+          </Link>
         }
-        description="Phòng học được gắn trực tiếp vào lịch học và có kiểm tra trùng phòng ở tầng cơ sở dữ liệu."
-        title="Quản lý phòng học"
+        description="Danh mục phòng học."
+        icon={<DoorOpenIcon className="size-5" />}
+        info="Phòng học được gắn trực tiếp vào lịch học và có kiểm tra trùng phòng ở tầng cơ sở dữ liệu."
+        title="Phòng học"
       />
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
       ) : null}
-      <FormPanelCard
-        description="Tìm nhanh theo mã phòng, tên phòng, tòa nhà và trạng thái sử dụng."
-        title="Bộ lọc phòng học"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${statusFilter}`}
           searchPlaceholder="Tìm mã phòng, tên phòng, tòa nhà"
@@ -109,16 +109,24 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.9fr)]">
-        <RoomsTable data={rows} returnTo={returnTo} />
+      </SectionPanel>
+      <RoomsTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={editId ? "Chỉnh sửa" : "Thêm mới"}
+        closeHref={returnTo}
+        description="Quản lý mã phòng, tòa nhà, sức chứa và trạng thái sử dụng."
+        icon={<DoorOpenIcon className="size-5" />}
+        open={isEditorOpen}
+        title={editId ? "Cập nhật phòng học" : "Thêm phòng học"}
+        variant="dialog"
+      >
         <Suspense
           fallback={<FormCardSkeleton sections={2} title="Đang tải biểu mẫu phòng học" />}
           key={editId ?? "create"}
         >
           <RoomEditorCard editId={editId} returnTo={returnTo} />
         </Suspense>
-      </div>
+      </RoutePanel>
     </div>
   );
 }

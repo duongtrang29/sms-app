@@ -1,3 +1,12 @@
+import {
+  AlertTriangleIcon,
+  BarChart3Icon,
+  ClipboardCheckIcon,
+  ClipboardListIcon,
+  GraduationCapIcon,
+  UserRoundIcon,
+} from "lucide-react";
+
 import { ReportsOverview } from "@/components/dashboard/reports-overview";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
@@ -9,31 +18,36 @@ export default async function AdminReportsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        description="Báo cáo tổng hợp phục vụ minh họa và kiểm tra nhanh cấu trúc dữ liệu, học vụ, điểm và mức độ sẵn sàng vận hành."
-        eyebrow="Khu quản trị"
-        title="Báo cáo và thống kê"
+        description="Tổng hợp chỉ số vận hành."
+        icon={<BarChart3Icon className="size-5" />}
+        info="Báo cáo tổng hợp phục vụ minh họa và kiểm tra nhanh cấu trúc dữ liệu, học vụ, điểm và mức độ sẵn sàng vận hành."
+        title="Báo cáo"
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           description="Sinh viên đang còn hiệu lực học tập"
+          icon={<GraduationCapIcon className="size-4" />}
           label="Sinh viên"
           tone="primary"
           value={report.summary.activeStudents}
         />
         <StatCard
           description="Giảng viên đã được cấp hồ sơ hệ thống"
+          icon={<UserRoundIcon className="size-4" />}
           label="Giảng viên"
           tone="info"
           value={report.summary.totalLecturers}
         />
         <StatCard
           description="Học phần còn trong trạng thái mở"
+          icon={<ClipboardListIcon className="size-4" />}
           label="Học phần đang mở"
           tone="success"
           value={report.summary.openOfferings}
         />
         <StatCard
           description="Bảng điểm đang chờ quản trị viên duyệt"
+          icon={<ClipboardCheckIcon className="size-4" />}
           label="Điểm chờ duyệt"
           tone="warning"
           value={report.summary.submittedGrades}
@@ -48,6 +62,7 @@ export default async function AdminReportsPage() {
         />
         <StatCard
           description="Sinh viên thuộc diện cảnh báo học vụ"
+          icon={<AlertTriangleIcon className="size-4" />}
           label="Cảnh báo học vụ"
           tone="danger"
           value={report.summary.activeWarnings}

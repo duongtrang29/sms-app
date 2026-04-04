@@ -1,9 +1,16 @@
+import {
+  Clock3Icon,
+  DatabaseIcon,
+  SearchCheckIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
+
 import { AuditLogsTable } from "@/components/dashboard/audit-logs-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
-import { FormPanelCard } from "@/components/forms/form-container";
 import { listAuditLogs } from "@/features/audit-logs/queries";
 import {
   getAuditActionLabel,
@@ -46,40 +53,44 @@ export default async function AuditLogsPage({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        description="Theo dõi các thao tác nhạy cảm trên hệ thống để kiểm tra phân quyền, truy vết thay đổi và đối chiếu dữ liệu minh họa với dữ liệu thật."
-        title="Nhật ký hệ thống"
+        description="Theo dõi thao tác nhạy cảm & đối soát dữ liệu."
+        icon={<ShieldCheckIcon className="size-5" />}
+        info="Theo dõi các thao tác nhạy cảm trên hệ thống để kiểm tra phân quyền, truy vết thay đổi và đối chiếu dữ liệu minh họa với dữ liệu thật."
+        title="Audit log"
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           description="Tổng số sự kiện đã ghi nhận"
+          icon={<ShieldCheckIcon className="size-4" />}
           label="Tổng sự kiện"
           value={snapshot.summary.totalEvents}
         />
         <StatCard
           description="Sự kiện phát sinh trong hôm nay theo múi giờ máy chủ"
+          icon={<Clock3Icon className="size-4" />}
           label="Hôm nay"
           value={snapshot.summary.todayEvents}
         />
         <StatCard
           description="Các sự kiện liên quan xác thực"
+          icon={<SearchCheckIcon className="size-4" />}
           label="Sự kiện xác thực"
           value={snapshot.summary.authEvents}
         />
         <StatCard
           description="Sự kiện thuộc nhóm dữ liệu minh họa"
+          icon={<DatabaseIcon className="size-4" />}
           label="Sự kiện minh họa"
           value={snapshot.summary.demoEvents}
         />
         <StatCard
           description="Sự kiện thuộc dữ liệu thật"
+          icon={<DatabaseIcon className="size-4" />}
           label="Sự kiện dữ liệu thật"
           value={snapshot.summary.liveEvents}
         />
       </div>
-      <FormPanelCard
-        description="Tìm theo thao tác, vai trò, nguồn dữ liệu và từ khóa trong siêu dữ liệu."
-        title="Bộ lọc nhật ký"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${query}|${action}|${role}|${demo}`}
           searchPlaceholder="Tìm thao tác, đối tượng, siêu dữ liệu"
@@ -115,12 +126,13 @@ export default async function AuditLogsPage({
             },
           ]}
         />
-      </FormPanelCard>
+      </SectionPanel>
       {snapshot.items.length ? (
         <AuditLogsTable data={snapshot.items} />
       ) : (
         <EmptyState
             description="Thử nới bộ lọc hoặc đặt lại truy vấn để xem thêm sự kiện hệ thống."
+            icon={<SearchCheckIcon className="size-5" />}
             title="Không có nhật ký phù hợp"
           />
         )}

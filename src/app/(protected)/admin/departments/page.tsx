@@ -1,18 +1,22 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Building2Icon, PlusIcon } from "lucide-react";
 
 import { DepartmentsTable } from "@/components/dashboard/departments-table";
 import { DepartmentForm } from "@/components/forms/department-form";
 import { FormAlert } from "@/components/forms/form-alert";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { Button } from "@/components/ui/button";
 import { getDepartmentById, listDepartments } from "@/features/departments/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 
 type DepartmentsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -28,16 +32,11 @@ async function DepartmentEditorCard({
   const department = editId ? await getDepartmentById(editId) : null;
 
   return (
-    <FormPanelCard
-      description="Biểu mẫu dùng chung cho cả tạo mới và cập nhật khoa."
-      title={department ? "Cập nhật khoa" : "Tạo khoa mới"}
-    >
-      <DepartmentForm
-        key={`department-form-${editId ?? "create"}`}
-        department={department}
-        returnTo={returnTo}
-      />
-    </FormPanelCard>
+    <DepartmentForm
+      key={`department-form-${editId ?? "create"}`}
+      department={department}
+      returnTo={returnTo}
+    />
   );
 }
 
@@ -51,6 +50,7 @@ export default async function DepartmentsPage({
   const query = queryValue.toLowerCase();
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
   const success = getSearchParamString(resolvedSearchParams, "success");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
   const departments = await listDepartments();
   const rows = departments.filter((department) => {
     if (
@@ -76,29 +76,29 @@ export default async function DepartmentsPage({
     ["q", queryValue],
     ["status", statusFilter],
   ]);
+  const isCreateOpen = mode === "create";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
-              </Button>
-            </Link>
-          ) : null
+          <Link href={buildCreatePath(returnTo)}>
+            <Button type="button">
+              <PlusIcon data-icon="inline-start" />
+              Thêm mới
+            </Button>
+          </Link>
         }
-        description="Danh mục khoa là tầng gốc cho ngành, lớp và dữ liệu sinh viên."
-        title="Quản lý khoa"
+        description="Danh mục đơn vị đào tạo."
+        icon={<Building2Icon className="size-5" />}
+        info="Khoa là tầng gốc cho ngành, lớp và dữ liệu sinh viên."
+        title="Khoa"
       />
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
       ) : null}
-      <FormPanelCard
-        description="Tìm nhanh theo mã khoa, tên khoa hoặc trạng thái sử dụng."
-        title="Bộ lọc khoa"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${statusFilter}`}
           searchPlaceholder="Tìm mã khoa, tên khoa, mô tả"
@@ -115,16 +115,24 @@ export default async function DepartmentsPage({
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.9fr)]">
-        <DepartmentsTable data={rows} returnTo={returnTo} />
+      </SectionPanel>
+      <DepartmentsTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={editId ? "Chỉnh sửa" : "Thêm mới"}
+        closeHref={returnTo}
+        description="Quản lý mã khoa, tên khoa và trạng thái sử dụng."
+        icon={<Building2Icon className="size-5" />}
+        open={isEditorOpen}
+        title={editId ? "Cập nhật khoa" : "Thêm khoa"}
+        variant="dialog"
+      >
         <Suspense
           fallback={<FormCardSkeleton sections={2} title="Đang tải biểu mẫu khoa" />}
           key={editId ?? "create"}
         >
           <DepartmentEditorCard editId={editId} returnTo={returnTo} />
         </Suspense>
-      </div>
+      </RoutePanel>
     </div>
   );
 }

@@ -9,8 +9,14 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowDownIcon,
+  ArrowUpDownIcon,
+  ArrowUpIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "lucide-react";
 
 import {
   Table,
@@ -46,6 +52,18 @@ function resolveAlignmentClassName(align?: "center" | "left" | "right") {
   return "text-left";
 }
 
+function resolveJustifyClassName(align?: "center" | "left" | "right") {
+  if (align === "center") {
+    return "justify-center";
+  }
+
+  if (align === "right") {
+    return "justify-end";
+  }
+
+  return "justify-start";
+}
+
 export function DataTable<TData>({
   caption,
   columns,
@@ -75,10 +93,7 @@ export function DataTable<TData>({
     },
   });
 
-  const hasRows = useMemo(
-    () => table.getRowModel().rows.length > 0,
-    [table],
-  );
+  const hasRows = table.getRowModel().rows.length > 0;
 
   if (!hasRows) {
     return <EmptyState description={emptyDescription} title={emptyTitle} />;
@@ -115,9 +130,39 @@ export function DataTable<TData>({
                   >
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
+                      : header.column.getCanSort() ? (
+                          <button
+                            className={cn(
+                              "inline-flex w-full items-center gap-2 transition-colors hover:text-foreground",
+                              resolveJustifyClassName(
+                                header.column.columnDef.meta?.align,
+                              ),
+                            )}
+                            onClick={header.column.getToggleSortingHandler()}
+                            type="button"
+                          >
+                            <span className="truncate">
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                            </span>
+                            {header.column.getIsSorted() === "asc" ? (
+                              <ArrowUpIcon aria-hidden="true" className="size-3.5" />
+                            ) : header.column.getIsSorted() === "desc" ? (
+                              <ArrowDownIcon aria-hidden="true" className="size-3.5" />
+                            ) : (
+                              <ArrowUpDownIcon
+                                aria-hidden="true"
+                                className="size-3.5 opacity-50"
+                              />
+                            )}
+                          </button>
+                        ) : (
+                          flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )
                         )}
                   </TableHead>
                 ))}

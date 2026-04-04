@@ -1,19 +1,23 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { BookOpenIcon, PlusIcon } from "lucide-react";
 
 import { MajorsTable } from "@/components/dashboard/majors-table";
 import { FormAlert } from "@/components/forms/form-alert";
 import { MajorForm } from "@/components/forms/major-form";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { Button } from "@/components/ui/button";
 import { listDepartments } from "@/features/departments/queries";
 import { getMajorById, listMajors } from "@/features/majors/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 
 type MajorsPageProps = {
@@ -32,17 +36,12 @@ async function MajorEditorCard({
   const major = editId ? await getMajorById(editId) : null;
 
   return (
-    <FormPanelCard
-      description="Biểu mẫu ngành dùng chung cho tạo mới và cập nhật."
-      title={major ? "Cập nhật ngành" : "Tạo ngành mới"}
-    >
-      <MajorForm
-        key={`major-form-${editId ?? "create"}`}
-        departments={departments}
-        major={major}
-        returnTo={returnTo}
-      />
-    </FormPanelCard>
+    <MajorForm
+      key={`major-form-${editId ?? "create"}`}
+      departments={departments}
+      major={major}
+      returnTo={returnTo}
+    />
   );
 }
 
@@ -55,6 +54,7 @@ export default async function MajorsPage({ searchParams }: MajorsPageProps) {
   const query = queryValue.toLowerCase();
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
   const success = getSearchParamString(resolvedSearchParams, "success");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
 
   const [departments, majors] = await Promise.all([
     listDepartments(),
@@ -104,29 +104,29 @@ export default async function MajorsPage({ searchParams }: MajorsPageProps) {
     ["department", departmentFilter],
     ["status", statusFilter],
   ]);
+  const isCreateOpen = mode === "create";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
-              </Button>
-            </Link>
-          ) : null
+          <Link href={buildCreatePath(returnTo)}>
+            <Button type="button">
+              <PlusIcon data-icon="inline-start" />
+              Thêm mới
+            </Button>
+          </Link>
         }
-        description="Ngành liên kết với khoa và là trục chính để gắn lớp sinh hoạt."
-        title="Quản lý ngành"
+        description="Danh mục ngành đào tạo."
+        icon={<BookOpenIcon className="size-5" />}
+        info="Ngành liên kết với khoa và là trục chính để gắn lớp sinh hoạt."
+        title="Ngành"
       />
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
       ) : null}
-      <FormPanelCard
-        description="Lọc theo khoa, trạng thái và từ khóa để rà nhanh danh mục ngành."
-        title="Bộ lọc ngành"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${departmentFilter}|${statusFilter}`}
           searchPlaceholder="Tìm mã ngành, tên ngành, khoa"
@@ -149,9 +149,17 @@ export default async function MajorsPage({ searchParams }: MajorsPageProps) {
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.9fr)]">
-        <MajorsTable data={rows} returnTo={returnTo} />
+      </SectionPanel>
+      <MajorsTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={editId ? "Chỉnh sửa" : "Thêm mới"}
+        closeHref={returnTo}
+        description="Quản lý mã ngành, khoa chủ quản và trạng thái sử dụng."
+        icon={<BookOpenIcon className="size-5" />}
+        open={isEditorOpen}
+        title={editId ? "Cập nhật ngành" : "Thêm ngành"}
+        variant="dialog"
+      >
         <Suspense
           fallback={<FormCardSkeleton sections={2} title="Đang tải biểu mẫu ngành" />}
           key={editId ?? "create"}
@@ -162,7 +170,7 @@ export default async function MajorsPage({ searchParams }: MajorsPageProps) {
             returnTo={returnTo}
           />
         </Suspense>
-      </div>
+      </RoutePanel>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleHelpIcon } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 
 import {
   Tooltip,
@@ -26,7 +26,7 @@ export function InfoHint({ className, content }: InfoHintProps) {
             className,
           )}
         >
-          <CircleHelpIcon className="size-3.5" />
+          <InfoIcon className="size-3.5" />
         </TooltipTrigger>
         <TooltipContent className="max-w-sm text-left text-[13px] leading-5">
           {content}

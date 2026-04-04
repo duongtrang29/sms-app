@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 type StatCardProps = {
   description: string;
+  icon?: React.ReactNode;
   label: string;
   tone?: "danger" | "info" | "neutral" | "primary" | "success" | "warning";
   value: React.ReactNode;
@@ -35,25 +36,39 @@ const dotClassMap: Record<NonNullable<StatCardProps["tone"]>, string> = {
 
 export function StatCard({
   description,
+  icon,
   label,
   tone = "primary",
   value,
 }: StatCardProps) {
   return (
-    <Card className={cn("shadow-none", toneClassMap[tone])} size="sm">
+    <Card
+      className={cn(
+        "overflow-hidden border-border/70 shadow-none",
+        toneClassMap[tone],
+      )}
+      size="sm"
+    >
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          <span className={cn("app-status-dot", dotClassMap[tone])} />
-          {label}
+        <CardTitle className="flex items-center justify-between gap-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <span className="inline-flex items-center gap-2">
+            <span className={cn("app-status-dot", dotClassMap[tone])} />
+            {label}
+          </span>
+          {icon ? (
+            <span className="flex size-9 items-center justify-center rounded-xl bg-white/70 text-[color:var(--color-info-foreground)] shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+              {icon}
+            </span>
+          ) : null}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        <div className="text-3xl font-semibold tracking-[-0.05em] text-foreground">
+        <div className="text-3xl font-semibold tracking-[-0.05em] text-foreground tabular-nums">
           {value}
         </div>
         <CompactDescription
           className="text-sm text-muted-foreground"
-          maxLength={52}
+          maxLength={46}
           text={description}
         />
       </CardContent>

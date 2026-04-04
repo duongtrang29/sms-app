@@ -67,7 +67,7 @@ export function FormContainer({
   className,
 }: React.ComponentProps<"div">) {
   return (
-    <div className={cn("mx-auto flex w-full max-w-5xl flex-col gap-9", className)}>
+    <div className={cn("mx-auto flex w-full max-w-5xl flex-col gap-8", className)}>
       {children}
     </div>
   );
@@ -113,6 +113,7 @@ export function FormGrid({
       className={cn(
         "grid grid-cols-1 gap-4 md:gap-5",
         columns === 3 ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2",
+        columns === 2 ? "[&>*:last-child:nth-child(odd)]:md:col-span-2" : "",
         className,
       )}
     >

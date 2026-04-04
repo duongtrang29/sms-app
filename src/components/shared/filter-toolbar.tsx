@@ -1,6 +1,6 @@
 "use client";
 
-import { SearchIcon, XIcon } from "lucide-react";
+import { ListFilterIcon, RotateCcwIcon, SearchIcon, XIcon } from "lucide-react";
 import {
   useDeferredValue,
   useEffect,
@@ -163,7 +163,7 @@ export function FilterToolbar({
           <Input
             aria-label={searchPlaceholder}
             autoComplete="off"
-            className="pl-9"
+            className="h-11 rounded-2xl border-border/75 bg-background/95 pl-9 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]"
             name={searchKey}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={searchPlaceholder}
@@ -175,22 +175,27 @@ export function FilterToolbar({
           const currentValue = searchParams.get(select.key) ?? "";
 
           return (
-            <select
-              aria-label={select.label}
-              key={select.key}
-              className="app-native-select"
-              onChange={(event) =>
-                replaceUrl([[select.key, event.target.value || null]])
-              }
-              value={currentValue}
-            >
-              <option value="">{select.placeholder}</option>
-              {select.options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative" key={select.key}>
+              <ListFilterIcon
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <select
+                aria-label={select.label}
+                className="app-native-select h-11 rounded-2xl border-border/75 bg-background/95 pl-9"
+                onChange={(event) =>
+                  replaceUrl([[select.key, event.target.value || null]])
+                }
+                value={currentValue}
+              >
+                <option value="">{select.placeholder}</option>
+                {select.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           );
         })}
         <Button
@@ -205,6 +210,7 @@ export function FilterToolbar({
           type="button"
           variant="outline"
         >
+          <RotateCcwIcon data-icon="inline-start" />
           Xóa lọc
         </Button>
       </div>

@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import {
+  BookOpenIcon,
+  ClipboardListIcon,
+  PlusIcon,
+  Rows3Icon,
+} from "lucide-react";
 
 import { CourseOfferingsTable } from "@/components/dashboard/course-offerings-table";
 import { CourseOfferingForm } from "@/components/forms/course-offering-form";
 import { FormAlert } from "@/components/forms/form-alert";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { listCourses } from "@/features/courses/queries";
@@ -20,7 +25,11 @@ import {
 } from "@/features/course-offerings/queries";
 import { listLecturers } from "@/features/lecturers/queries";
 import { listSemesters } from "@/features/semesters/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 import type { SelectOption } from "@/types/forms";
 
@@ -44,19 +53,14 @@ async function CourseOfferingEditorCard({
   const offering = editId ? await getCourseOfferingById(editId) : null;
 
   return (
-    <FormPanelCard
-        description="Các trường liên kết đều hiển thị nhãn dễ đọc, khi gửi dữ liệu vẫn dùng mã định danh ở nền dưới."
-        title={offering ? "Cập nhật học phần" : "Mở học phần mới"}
-    >
-      <CourseOfferingForm
-        courseOptions={courseOptions}
-        key={`offering-form-${editId ?? "create"}`}
-        lecturerOptions={lecturerOptions}
-        offering={offering}
-        returnTo={returnTo}
-        semesterOptions={semesterOptions}
-      />
-    </FormPanelCard>
+    <CourseOfferingForm
+      courseOptions={courseOptions}
+      key={`offering-form-${editId ?? "create"}`}
+      lecturerOptions={lecturerOptions}
+      offering={offering}
+      returnTo={returnTo}
+      semesterOptions={semesterOptions}
+    />
   );
 }
 
@@ -69,11 +73,14 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
   const semesterFilter = getSearchParamString(resolvedSearchParams, "semester");
   const success = getSearchParamString(resolvedSearchParams, "success");
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
   const returnTo = buildReturnPath("/admin/offerings", [
     ["q", queryValue],
     ["semester", semesterFilter],
     ["status", statusFilter],
   ]);
+  const isCreateOpen = mode === "create";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   const [courses, offerings, lecturers, primaryAssignments, semesters] =
     await Promise.all([
@@ -162,33 +169,36 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
-              </Button>
-            </Link>
-          ) : null
+          <Link href={buildCreatePath(returnTo)}>
+            <Button type="button">
+              <PlusIcon data-icon="inline-start" />
+              Thêm mới
+            </Button>
+          </Link>
         }
-        description="Mỗi học phần mở thuộc một môn học và một học kỳ, có giảng viên chính và quy tắc đăng ký riêng."
-        eyebrow="Khu quản trị"
-        title="Quản lý học phần mở"
+        description="Danh sách học phần mở theo học kỳ."
+        icon={<ClipboardListIcon className="size-5" />}
+        info="Mỗi học phần mở thuộc một môn học và một học kỳ, có giảng viên chính và quy tắc đăng ký riêng."
+        title="Học phần mở"
       />
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           description="Tổng số học phần đã cấu hình trong hệ thống."
+          icon={<ClipboardListIcon className="size-4" />}
           label="Tổng học phần mở"
           tone="primary"
           value={allRows.length}
         />
         <StatCard
           description="Học phần hiện còn đang mở cho sinh viên đăng ký."
+          icon={<BookOpenIcon className="size-4" />}
           label="Đang mở"
           tone="info"
           value={allRows.filter((row) => row.status === "OPEN").length}
         />
         <StatCard
           description="Học phần đã hoàn tất hoặc đóng đăng ký."
+          icon={<Rows3Icon className="size-4" />}
           label="Đã đóng / kết thúc"
           tone="neutral"
           value={
@@ -207,10 +217,7 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
       ) : null}
-      <FormPanelCard
-        description="Bộ lọc theo học kỳ và trạng thái dùng đường dẫn trang làm nguồn dữ liệu chuẩn, ô tìm kiếm cập nhật trễ tự động."
-        title="Bộ lọc học phần mở"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${semesterFilter}|${statusFilter}`}
           searchPlaceholder="Tìm môn học, giảng viên, nhóm, học kỳ"
@@ -236,9 +243,17 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(420px,0.98fr)]">
-        <CourseOfferingsTable data={rows} returnTo={returnTo} />
+      </SectionPanel>
+      <CourseOfferingsTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={editId ? "Chỉnh sửa" : "Thêm mới"}
+        closeHref={returnTo}
+        description="Quản lý môn học, học kỳ, giảng viên chính và sức chứa theo học phần."
+        icon={<ClipboardListIcon className="size-5" />}
+        open={isEditorOpen}
+        title={editId ? "Cập nhật học phần mở" : "Mở học phần"}
+        variant="drawer"
+      >
         <Suspense
           fallback={<FormCardSkeleton sections={3} title="Đang tải học phần mở" />}
           key={editId ?? "create"}
@@ -251,7 +266,7 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
             semesterOptions={semesterOptions}
           />
         </Suspense>
-      </div>
+      </RoutePanel>
     </div>
   );
 }

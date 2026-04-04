@@ -1,21 +1,33 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import {
+  GraduationCapIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+  UploadIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { StudentsTable } from "@/components/dashboard/students-table";
 import { FormAlert } from "@/components/forms/form-alert";
 import { StudentForm } from "@/components/forms/student-form";
 import { StudentImportForm } from "@/components/forms/student-import-form";
-import {
-  FormCardSkeleton,
-  FormPanelCard,
-} from "@/components/forms/form-container";
+import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
+import { RoutePanel } from "@/components/shared/route-panel";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAcademicClasses } from "@/features/academic-classes/queries";
 import { getStudentById, listStudents } from "@/features/students/queries";
-import { buildReturnPath, getSearchParamString } from "@/lib/admin-routing";
+import {
+  buildCreatePath,
+  buildImportPath,
+  buildReturnPath,
+  getSearchParamString,
+} from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 
 type StudentsPageProps = {
@@ -34,17 +46,12 @@ async function StudentEditorCard({
   const student = editId ? await getStudentById(editId) : null;
 
   return (
-    <FormPanelCard
-      description="Dữ liệu hồ sơ, học tập và liên hệ sẽ được điền sẵn khi mở chế độ sửa."
-      title={student ? "Cập nhật sinh viên" : "Tạo sinh viên mới"}
-    >
-      <StudentForm
-        academicClasses={academicClasses}
-        key={`student-form-${editId ?? "create"}`}
-        returnTo={returnTo}
-        student={student}
-      />
-    </FormPanelCard>
+    <StudentForm
+      academicClasses={academicClasses}
+      key={`student-form-${editId ?? "create"}`}
+      returnTo={returnTo}
+      student={student}
+    />
   );
 }
 
@@ -58,6 +65,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const queryValue = getSearchParamString(resolvedSearchParams, "q");
   const query = queryValue.toLowerCase();
   const success = getSearchParamString(resolvedSearchParams, "success");
+  const mode = getSearchParamString(resolvedSearchParams, "mode");
 
   const [academicClasses, students] = await Promise.all([
     listAcademicClasses(),
@@ -120,22 +128,32 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     ["academic", academicFilter],
     ["class", classFilter],
   ]);
+  const isCreateOpen = mode === "create" || mode === "import";
+  const isEditorOpen = isCreateOpen || Boolean(editId);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         actions={
-          editId ? (
-            <Link href={returnTo}>
-              <Button type="button" variant="outline">
-                Tạo mới
+          <div className="flex flex-wrap gap-2">
+            <Link href={buildCreatePath(returnTo)}>
+              <Button type="button">
+                <PlusIcon data-icon="inline-start" />
+                Thêm mới
               </Button>
             </Link>
-          ) : null
+            <Link href={buildImportPath(returnTo)}>
+              <Button type="button" variant="outline">
+                <UploadIcon data-icon="inline-start" />
+                Import
+              </Button>
+            </Link>
+          </div>
         }
-        description="Quản trị viên có thể tạo sinh viên thủ công hoặc nhập tệp CSV để kiểm thử đầy đủ luồng học vụ, đăng ký và điểm."
-        eyebrow="Khu quản trị"
-        title="Quản lý sinh viên"
+        description="Hồ sơ sinh viên & trạng thái học tập."
+        icon={<GraduationCapIcon className="size-5" />}
+        info="Quản trị viên có thể tạo sinh viên thủ công hoặc nhập tệp CSV để kiểm thử đầy đủ luồng học vụ, đăng ký và điểm."
+        title="Sinh viên"
       />
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
@@ -143,18 +161,21 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           description="Tổng hồ sơ sinh viên hiện có."
+          icon={<UsersIcon className="size-4" />}
           label="Tổng sinh viên"
           tone="primary"
           value={allRows.length}
         />
         <StatCard
           description="Tài khoản có thể đăng nhập hệ thống."
+          icon={<ShieldCheckIcon className="size-4" />}
           label="Truy cập khả dụng"
           tone="success"
           value={allRows.filter((row) => row.access_status === "ACTIVE").length}
         />
         <StatCard
           description="Sinh viên đang học tập bình thường."
+          icon={<GraduationCapIcon className="size-4" />}
           label="Đang học"
           tone="info"
           value={allRows.filter((row) => row.current_status === "ACTIVE").length}
@@ -166,10 +187,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           value={rows.length}
         />
       </div>
-      <FormPanelCard
-        description="Tìm nhanh theo MSSV, họ tên hoặc thu gọn theo lớp và trạng thái."
-        title="Bộ lọc sinh viên"
-      >
+      <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${accessFilter}|${academicFilter}|${classFilter}`}
           searchPlaceholder="Tìm MSSV, họ tên, lớp"
@@ -204,19 +222,28 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             },
           ]}
         />
-      </FormPanelCard>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.95fr)]">
-        <StudentsTable data={rows} returnTo={returnTo} />
-        <div className="flex flex-col gap-6">
-          <FormPanelCard
-            description="Nhập nhanh dữ liệu minh họa hoặc dữ liệu tuyển sinh theo mẫu CSV của hệ thống."
-            title="Nhập sinh viên từ CSV"
-          >
-            <StudentImportForm />
-          </FormPanelCard>
+      </SectionPanel>
+      <StudentsTable data={rows} returnTo={returnTo} />
+      <RoutePanel
+        badge={
+          editId
+            ? "Chỉnh sửa"
+            : mode === "import"
+              ? "Import"
+              : "Thêm mới"
+        }
+        closeHref={returnTo}
+        description="Tạo hồ sơ thủ công hoặc import CSV trong cùng một luồng thao tác."
+        icon={<GraduationCapIcon className="size-5" />}
+        open={isEditorOpen}
+        size="xl"
+        title={editId ? "Cập nhật sinh viên" : "Thêm sinh viên"}
+        variant="drawer"
+      >
+        {editId ? (
           <Suspense
             fallback={<FormCardSkeleton sections={4} title="Đang tải hồ sơ sinh viên" />}
-            key={editId ?? "create"}
+            key={editId}
           >
             <StudentEditorCard
               academicClasses={academicClasses}
@@ -224,8 +251,36 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               returnTo={returnTo}
             />
           </Suspense>
-        </div>
-      </div>
+        ) : (
+          <Tabs defaultValue={mode === "import" ? "import" : "manual"}>
+            <TabsList className="mb-5">
+              <TabsTrigger value="manual">
+                <PlusIcon data-icon="inline-start" />
+                Nhập thủ công
+              </TabsTrigger>
+              <TabsTrigger value="import">
+                <UploadIcon data-icon="inline-start" />
+                Import CSV
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="manual">
+              <Suspense
+                fallback={<FormCardSkeleton sections={4} title="Đang tải hồ sơ sinh viên" />}
+                key="student-create"
+              >
+                <StudentEditorCard
+                  academicClasses={academicClasses}
+                  editId={null}
+                  returnTo={returnTo}
+                />
+              </Suspense>
+            </TabsContent>
+            <TabsContent value="import">
+              <StudentImportForm />
+            </TabsContent>
+          </Tabs>
+        )}
+      </RoutePanel>
     </div>
   );
 }
