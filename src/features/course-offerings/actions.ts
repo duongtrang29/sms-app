@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { failure, parseWithSchema } from "@/lib/actions";
+import { buildPathWithUpdates } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
 import { matchServerFieldErrors } from "@/lib/form-errors";
@@ -28,9 +29,7 @@ function redirectToOfferings(
   type: "error" | "success",
   message: string,
 ): never {
-  const url = new URL(`http://local${returnPath}`);
-  url.searchParams.set(type, message);
-  redirect(`${url.pathname}?${url.searchParams.toString()}`);
+  redirect(buildPathWithUpdates(returnPath, [[type, message]]));
 }
 
 export async function upsertCourseOfferingAction(
@@ -46,99 +45,60 @@ export async function upsertCourseOfferingAction(
   }
 
   const supabase = await createClient();
-  const payload = {
-    attendance_weight: parsed.data.attendance_weight,
-    course_id: parsed.data.course_id,
-    final_weight: parsed.data.final_weight,
-    max_capacity: parsed.data.max_capacity,
-    midterm_weight: parsed.data.midterm_weight,
-    notes: parsed.data.notes || null,
-    passing_score: parsed.data.passing_score,
-    registration_close_at: parsed.data.registration_close_at,
-    registration_open_at: parsed.data.registration_open_at,
-    section_code: parsed.data.section_code.toUpperCase(),
-    semester_id: parsed.data.semester_id,
-    status: parsed.data.status,
-    title: parsed.data.title || null,
+  const rpcPayload = {
+    p_attendance_weight: parsed.data.attendance_weight,
+    p_course_id: parsed.data.course_id,
+    p_final_weight: parsed.data.final_weight,
+    p_lecturer_id: parsed.data.lecturer_id || null,
+    p_max_capacity: parsed.data.max_capacity,
+    p_midterm_weight: parsed.data.midterm_weight,
+    p_notes: parsed.data.notes || null,
+    p_offering_id: parsed.data.id ?? null,
+    p_passing_score: parsed.data.passing_score,
+    p_registration_close_at: parsed.data.registration_close_at,
+    p_registration_open_at: parsed.data.registration_open_at,
+    p_section_code: parsed.data.section_code.toUpperCase(),
+    p_semester_id: parsed.data.semester_id,
+    p_status: parsed.data.status,
+    p_title: parsed.data.title || null,
   };
 
-  let offeringId = parsed.data.id;
+  const rpc = supabase.rpc as unknown as (
+    fn: "upsert_course_offering_with_assignment",
+    payload: typeof rpcPayload,
+  ) => Promise<{ data: string | null; error: { message: string } | null }>;
 
-  if (parsed.data.id) {
-    const { error } = await supabase
-      .from("course_offerings")
-      .update(payload as never)
-      .eq("id", parsed.data.id);
+  const { data: offeringId, error: rpcError } = await rpc(
+    "upsert_course_offering_with_assignment",
+    rpcPayload,
+  );
 
-    if (error) {
-      const fieldErrors = matchServerFieldErrors(error.message, [
-        {
-          field: "section_code",
-          message: "Nhóm học phần đã tồn tại trong học kỳ của môn học này.",
-          test: "course_offerings_unique_section",
-        },
-      ]);
+  if (rpcError) {
+    const fieldErrors = matchServerFieldErrors(rpcError.message, [
+      {
+        field: "section_code",
+        message: "Nhóm học phần đã tồn tại trong học kỳ của môn học này.",
+        test: "course_offerings_unique_section",
+      },
+      {
+        field: "lecturer_id",
+        message: "Không thể gán giảng viên cho học phần.",
+        test: ["teaching_assignments", "lecturer"],
+      },
+    ]);
 
-      return failure(
-        fieldErrors?.section_code?.[0] ?? "Không thể cập nhật học phần mở.",
-        fieldErrors,
-      );
-    }
-  } else {
-    const { data, error } = await supabase
-      .from("course_offerings")
-      .insert(payload as never)
-      .select("id")
-      .single();
-
-    if (error) {
-      const fieldErrors = matchServerFieldErrors(error.message, [
-        {
-          field: "section_code",
-          message: "Nhóm học phần đã tồn tại trong học kỳ của môn học này.",
-          test: "course_offerings_unique_section",
-        },
-      ]);
-
-      return failure(
-        fieldErrors?.section_code?.[0] ?? "Không thể tạo học phần mở.",
-        fieldErrors,
-      );
-    }
-
-    offeringId = (data as { id: string }).id;
+    return failure(
+      fieldErrors?.section_code?.[0] ??
+        fieldErrors?.lecturer_id?.[0] ??
+        (parsed.data.id
+          ? "Không thể cập nhật học phần mở."
+          : "Không thể tạo học phần mở."),
+      fieldErrors,
+    );
   }
 
   if (!offeringId) {
     return failure("Không xác định được học phần mở.");
-  }
-
-  const { error: assignmentDeleteError } = await supabase
-    .from("teaching_assignments")
-    .delete()
-    .eq("course_offering_id", offeringId);
-
-  if (assignmentDeleteError) {
-    return failure("Không thể cập nhật giảng viên cho học phần.", {
-      lecturer_id: ["Không thể cập nhật giảng viên cho học phần."],
-    });
-  }
-
-  if (parsed.data.lecturer_id) {
-    const { error: assignmentError } = await supabase
-      .from("teaching_assignments")
-      .insert({
-        assignment_role: "PRIMARY",
-        course_offering_id: offeringId,
-        is_primary: true,
-        lecturer_id: parsed.data.lecturer_id,
-      } as never);
-
-    if (assignmentError) {
-      return failure("Không thể gán giảng viên cho học phần.", {
-        lecturer_id: ["Không thể gán giảng viên cho học phần."],
-      });
-    }
   }
 
   await createAuditLog({

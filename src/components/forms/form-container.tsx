@@ -38,24 +38,24 @@ export function FormPanelCard({
   return (
     <Card
       className={cn(
-        "h-fit overflow-hidden rounded-[30px] border-border/70 bg-background/92 shadow-[0_22px_64px_-44px_rgba(18,33,59,0.24)]",
+        "h-fit overflow-hidden rounded-[var(--radius-large)] border-border bg-background",
         className,
       )}
     >
-      <CardHeader className="gap-2 border-b border-border/60 bg-muted/[0.18] px-5 py-5 md:px-7 md:py-6">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/80">
+      <CardHeader className="gap-2 border-b border-border bg-muted/[0.18] px-6 py-6">
+        <div className="text-label text-muted-foreground">
           Biểu mẫu
         </div>
-        <CardTitle className="text-[1.12rem] tracking-tight">{title}</CardTitle>
+        <CardTitle className="text-heading">{title}</CardTitle>
         {description ? (
           <CompactDescription
-            className="text-sm text-muted-foreground"
+            className="text-body text-muted-foreground"
             maxLength={78}
             text={description}
           />
         ) : null}
       </CardHeader>
-      <CardContent className="px-5 pb-5 pt-5 md:px-7 md:pb-7 md:pt-7">
+      <CardContent className="px-6 py-6">
         {children}
       </CardContent>
     </Card>
@@ -82,17 +82,17 @@ export function FormSection({
   return (
     <section
       className={cn(
-        "space-y-5 border-t border-border/60 pt-7 first:border-t-0 first:pt-0",
+        "space-y-6 border-t border-border pt-6 first:border-t-0 first:pt-0",
         className,
       )}
     >
-      <div className="space-y-1.5">
-        <h3 className="text-base font-semibold tracking-tight text-foreground">
+      <div className="space-y-2">
+        <h3 className="text-heading text-foreground">
           {title}
         </h3>
         {description ? (
           <CompactDescription
-            className="max-w-3xl text-sm text-muted-foreground"
+            className="max-w-3xl text-body text-muted-foreground"
             maxLength={74}
             text={description}
           />
@@ -111,7 +111,7 @@ export function FormGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-4 md:gap-5",
+        "grid grid-cols-1 gap-4 md:gap-6",
         columns === 3 ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2",
         columns === 2 ? "[&>*:last-child:nth-child(odd)]:md:col-span-2" : "",
         className,
@@ -129,7 +129,7 @@ export function FormStickyFooter({
   return (
     <div
       className={cn(
-        "sticky bottom-0 z-10 mt-8 flex flex-col gap-3 border-t border-border/70 bg-background/96 pt-5 backdrop-blur supports-[backdrop-filter]:bg-background/90 md:flex-row md:items-center md:justify-between",
+        "sticky bottom-0 z-10 mt-8 flex flex-col gap-3 border-t border-border bg-background/96 pt-5 backdrop-blur supports-[backdrop-filter]:bg-background/90 md:flex-row md:items-center md:justify-between",
         className,
       )}
     >

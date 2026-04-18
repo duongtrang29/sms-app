@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { ListFilterIcon, RotateCcwIcon, SearchIcon, XIcon } from "lucide-react";
 import {
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -30,6 +31,8 @@ type FilterChip = {
 
 type FilterToolbarProps = {
   className?: string;
+  resultCount?: number;
+  resultLabel?: string;
   searchKey?: string;
   searchPlaceholder?: string;
   searchValue?: string;
@@ -38,8 +41,10 @@ type FilterToolbarProps = {
 
 export function FilterToolbar({
   className,
+  resultCount,
+  resultLabel = "bản ghi",
   searchKey = "q",
-  searchPlaceholder = "Tìm kiếm…",
+  searchPlaceholder = "Tìm kiếm",
   searchValue = "",
   selects = [],
 }: FilterToolbarProps) {
@@ -51,27 +56,27 @@ export function FilterToolbar({
   const deferredSearch = useDeferredValue(search.trim());
   const selectKeys = useMemo(() => selects.map((select) => select.key), [selects]);
 
-  function buildUrl(updates: Array<[string, string | null]>) {
-    const params = new URLSearchParams(searchParams.toString());
+  const replaceUrl = useCallback(
+    (updates: Array<[string, string | null]>) => {
+      const params = new URLSearchParams(searchParams.toString());
 
-    updates.forEach(([key, value]) => {
-      if (value && value.trim()) {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-    });
+      updates.forEach(([key, value]) => {
+        if (value && value.trim()) {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      });
 
-    const query = params.toString();
-    return query ? `${pathname}?${query}` : pathname;
-  }
+      const query = params.toString();
+      const nextUrl = query ? `${pathname}?${query}` : pathname;
 
-  function replaceUrl(updates: Array<[string, string | null]>) {
-    const nextUrl = buildUrl(updates);
-    startTransition(() => {
-      router.replace(nextUrl, { scroll: false });
-    });
-  }
+      startTransition(() => {
+        router.replace(nextUrl, { scroll: false });
+      });
+    },
+    [pathname, router, searchParams],
+  );
 
   useEffect(() => {
     const currentSearch = searchParams.get(searchKey)?.trim() ?? "";
@@ -81,33 +86,21 @@ export function FilterToolbar({
     }
 
     const timer = window.setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-
-      if (deferredSearch) {
-        params.set(searchKey, deferredSearch);
-      } else {
-        params.delete(searchKey);
-      }
-
-      const query = params.toString();
-      const nextUrl = query ? `${pathname}?${query}` : pathname;
-
-      startTransition(() => {
-        router.replace(nextUrl, { scroll: false });
-      });
-    }, 350);
+      replaceUrl([[searchKey, deferredSearch || null]]);
+    }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [deferredSearch, pathname, router, searchKey, searchParams, startTransition]);
+  }, [deferredSearch, replaceUrl, searchKey, searchParams]);
 
   const activeChips = useMemo(() => {
     const chips: FilterChip[] = [];
 
-    if (searchParams.get(searchKey)?.trim()) {
+    const keyword = searchParams.get(searchKey)?.trim();
+    if (keyword) {
       chips.push({
         key: searchKey,
         label: "Từ khóa",
-        value: searchParams.get(searchKey) ?? "",
+        value: keyword,
       });
     }
 
@@ -136,53 +129,36 @@ export function FilterToolbar({
   }, [searchKey, searchParams, selects]);
 
   const hasActiveFilters = activeChips.length > 0;
-  const toolbarColumnsClassName = useMemo(() => {
-    if (selects.length >= 3) {
-      return "xl:grid-cols-[1.6fr_repeat(3,minmax(0,1fr))_auto]";
-    }
-
-    if (selects.length === 2) {
-      return "xl:grid-cols-[1.8fr_repeat(2,minmax(0,1fr))_auto]";
-    }
-
-    if (selects.length === 1) {
-      return "xl:grid-cols-[2fr_minmax(0,1fr)_auto]";
-    }
-
-    return "xl:grid-cols-[1fr_auto]";
-  }, [selects.length]);
 
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className={cn("grid gap-3 md:grid-cols-2", toolbarColumnsClassName)}>
+    <div className={cn("space-y-3", className)}>
+      {typeof resultCount === "number" ? (
+        <p aria-live="polite" className="sr-only">
+          {isPending ? "Đang cập nhật dữ liệu." : `Đang hiển thị ${resultCount} ${resultLabel}.`}
+        </p>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.8fr_repeat(3,minmax(0,1fr))_auto]">
         <div className="relative">
-          <SearchIcon
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          />
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
           <Input
             aria-label={searchPlaceholder}
-            autoComplete="off"
-            className="h-11 rounded-2xl border-border/75 bg-background/95 pl-9 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]"
-            name={searchKey}
+            className="pl-9"
             onChange={(event) => setSearch(event.target.value)}
             placeholder={searchPlaceholder}
-            spellCheck={false}
             value={search}
           />
         </div>
+
         {selects.map((select) => {
           const currentValue = searchParams.get(select.key) ?? "";
 
           return (
             <div className="relative" key={select.key}>
-              <ListFilterIcon
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              />
+              <ListFilterIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
               <select
                 aria-label={select.label}
-                className="app-native-select h-11 rounded-2xl border-border/75 bg-background/95 pl-9"
+                className="app-native-select pl-9"
                 onChange={(event) =>
                   replaceUrl([[select.key, event.target.value || null]])
                 }
@@ -198,8 +174,8 @@ export function FilterToolbar({
             </div>
           );
         })}
+
         <Button
-          aria-label="Xóa toàn bộ bộ lọc"
           disabled={!hasActiveFilters || isPending}
           onClick={() =>
             replaceUrl([
@@ -210,24 +186,24 @@ export function FilterToolbar({
           type="button"
           variant="outline"
         >
-          <RotateCcwIcon data-icon="inline-start" />
+          <RotateCcwIcon className="size-4" data-icon="inline-start" />
           Xóa lọc
         </Button>
       </div>
+
       {hasActiveFilters ? (
         <div className="flex flex-wrap items-center gap-2">
           {activeChips.map((chip) => (
             <Button
-              aria-label={`Xóa bộ lọc ${chip.label}`}
+              className="h-8"
               key={`${chip.key}:${chip.value}`}
-              className="h-8 rounded-full px-3"
               onClick={() => replaceUrl([[chip.key, null]])}
               size="xs"
               type="button"
-              variant="outline"
+              variant="ghost"
             >
               {chip.label}: {chip.value}
-              <XIcon aria-hidden="true" className="size-3" data-icon="inline-end" />
+              <XIcon className="size-3" data-icon="inline-end" />
             </Button>
           ))}
         </div>

@@ -665,6 +665,7 @@ export interface Database {
       };
       schedules: {
         Row: {
+          active_date_range: unknown;
           course_offering_id: string;
           created_at: string;
           demo_batch: string | null;
@@ -677,6 +678,7 @@ export interface Database {
           room_id: string | null;
           start_date: string | null;
           start_time: string;
+          time_range: unknown;
           updated_at: string;
           week_pattern: string;
         };
@@ -902,6 +904,30 @@ export interface Database {
       };
     };
     Functions: {
+      calculate_student_cumulative_gpa4: {
+        Args: {
+          p_student_id: string;
+        };
+        Returns: number;
+      };
+      calculate_student_cumulative_score10: {
+        Args: {
+          p_student_id: string;
+        };
+        Returns: number;
+      };
+      can_read_course_offering: {
+        Args: {
+          p_offering_id: string;
+        };
+        Returns: boolean;
+      };
+      can_student_view_offering: {
+        Args: {
+          p_offering_id: string;
+        };
+        Returns: boolean;
+      };
       cancel_enrollment: {
         Args: {
           p_enrollment_id: string;
@@ -914,6 +940,10 @@ export interface Database {
         Returns: string | null;
       };
       is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      is_current_user_active: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
@@ -936,6 +966,40 @@ export interface Database {
       register_enrollment: {
         Args: {
           p_offering_id: string;
+        };
+        Returns: string;
+      };
+      upsert_course_offering_with_assignment: {
+        Args: {
+          p_attendance_weight: number;
+          p_course_id: string;
+          p_final_weight: number;
+          p_lecturer_id: string | null;
+          p_max_capacity: number;
+          p_midterm_weight: number;
+          p_notes: string | null;
+          p_offering_id: string | null;
+          p_passing_score: number;
+          p_registration_close_at: string;
+          p_registration_open_at: string;
+          p_section_code: string;
+          p_semester_id: string;
+          p_status: Database["public"]["Enums"]["offering_status"];
+          p_title: string | null;
+        };
+        Returns: string;
+      };
+      upsert_course_with_prerequisites: {
+        Args: {
+          p_code: string;
+          p_course_id: string | null;
+          p_credit_hours: number;
+          p_department_id: string;
+          p_description: string | null;
+          p_is_active: boolean;
+          p_name: string;
+          p_prerequisite_codes?: string[] | null;
+          p_total_sessions: number;
         };
         Returns: string;
       };

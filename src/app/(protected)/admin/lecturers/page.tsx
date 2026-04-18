@@ -172,6 +172,7 @@ export default async function LecturersPage({
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${departmentFilter}|${statusFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm mã GV, họ tên, email, khoa"
           searchValue={queryValue}
           selects={[

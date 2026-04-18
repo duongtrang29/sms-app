@@ -1,5 +1,6 @@
 "use client";
 
+import { CheckIcon, LockIcon, LockOpenIcon } from "lucide-react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table/data-table";
@@ -92,6 +93,7 @@ function buildColumns(returnTo: string) {
             <input name="next_status" type="hidden" value="APPROVED" />
             <input name="return_to" type="hidden" value={returnTo} />
             <Button size="sm" type="submit">
+              <CheckIcon data-icon="inline-start" />
               Duyệt
             </Button>
           </form>
@@ -102,6 +104,7 @@ function buildColumns(returnTo: string) {
             <input name="next_status" type="hidden" value="LOCKED" />
             <input name="return_to" type="hidden" value={returnTo} />
             <Button size="sm" type="submit" variant="outline">
+              <LockIcon data-icon="inline-start" />
               Khóa
             </Button>
           </form>
@@ -112,6 +115,7 @@ function buildColumns(returnTo: string) {
             <input name="next_status" type="hidden" value="APPROVED" />
             <input name="return_to" type="hidden" value={returnTo} />
             <Button size="sm" type="submit" variant="secondary">
+              <LockOpenIcon data-icon="inline-start" />
               Mở khóa
             </Button>
           </form>

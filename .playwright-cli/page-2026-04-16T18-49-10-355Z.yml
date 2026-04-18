@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]: SMS
+      - heading "Đăng nhập hệ thống" [level=1] [ref=e9]
+      - generic [ref=e10]:
+        - paragraph [ref=e11]: Đăng nhập bằng tài khoản do quản trị viên cấp để truy cập hệ thống quản…
+        - button "Xem thêm thông tin" [ref=e12]:
+          - img [ref=e13]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - group [ref=e17]:
+          - generic [ref=e18]: Email
+          - textbox "Email" [ref=e20]:
+            - /placeholder: taikhoan@truong.edu.vn
+        - group [ref=e21]:
+          - generic [ref=e22]: Mật khẩu
+          - textbox "Mật khẩu" [ref=e24]
+      - button "Đăng nhập" [ref=e25]
+    - generic [ref=e26]:
+      - text: Quên mật khẩu?
+      - link "Đặt lại tại đây" [ref=e27] [cursor=pointer]:
+        - /url: /forgot-password
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e33] [cursor=pointer]:
+    - img [ref=e34]

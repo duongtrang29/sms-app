@@ -6,11 +6,25 @@ import {
   GraduationCapIcon,
   UserRoundIcon,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import { ReportsOverview } from "@/components/dashboard/reports-overview";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { getAdminReportSnapshot } from "@/features/reports/queries";
+
+const ReportsOverview = dynamic(
+  () =>
+    import("@/components/dashboard/reports-overview").then(
+      (module) => module.ReportsOverview,
+    ),
+  {
+    loading: () => (
+      <div className="app-subtle-surface p-6 text-caption text-muted-foreground">
+        Đang tải biểu đồ báo cáo...
+      </div>
+    ),
+  },
+);
 
 export default async function AdminReportsPage() {
   const report = await getAdminReportSnapshot();

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { MenuIcon } from "lucide-react";
 
 import { navIconMap, navSectionLabelMap } from "@/components/app-shell/nav-icons";
@@ -26,20 +26,21 @@ function isActivePath(pathname: string, href: string) {
 
 export function MobileNav({ items }: MobileNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <Sheet>
       <SheetTrigger
-        render={<Button className="md:hidden" size="icon-sm" variant="outline" />}
+        render={<Button className="md:hidden" size="icon-sm" variant="secondary" />}
       >
         <MenuIcon />
         <span className="sr-only">Mở điều hướng</span>
       </SheetTrigger>
-      <SheetContent className="w-80 border-border/70 bg-background/95 backdrop-blur-xl">
+      <SheetContent className="w-80 border-border bg-background/95 backdrop-blur-xl">
         <SheetHeader>
           <SheetTitle>Điều hướng</SheetTitle>
         </SheetHeader>
-        <nav className="mt-4 space-y-2.5 overflow-y-auto pb-6">
+        <nav className="mt-4 space-y-3 overflow-y-auto pb-6">
           {items.map((item, index) => {
             const active = isActivePath(pathname, item.href);
             const Icon = navIconMap[item.icon];
@@ -47,24 +48,27 @@ export function MobileNav({ items }: MobileNavProps) {
             const showSectionLabel = index === 0 || previousSection !== item.section;
 
             return (
-              <div key={item.href} className="space-y-1">
+              <div key={item.href} className="space-y-2">
                 {showSectionLabel ? (
-                  <div className="px-1 pt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/80">
+                  <div className="text-label px-1 text-muted-foreground/80">
                     {navSectionLabelMap[item.section]}
                   </div>
                 ) : null}
                 <Link
                   className={cn(
-                    "flex items-center gap-2 rounded-xl border border-transparent px-2.5 py-2 text-[0.92rem] font-medium text-muted-foreground hover:border-border/60 hover:bg-white/85 hover:text-foreground",
+                    "flex min-h-11 items-center gap-3 rounded-[var(--radius-medium)] border border-transparent px-3 py-2 text-body font-medium text-muted-foreground",
+                    "hover:border-border hover:bg-accent/55 hover:text-foreground",
                     active &&
-                      "border-primary/16 bg-primary text-primary-foreground shadow-[0_14px_24px_-22px_rgba(67,92,230,0.72)] hover:bg-primary hover:text-primary-foreground",
+                      "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
                   )}
                   href={item.href}
+                  onFocus={() => router.prefetch(item.href)}
+                  onMouseEnter={() => router.prefetch(item.href)}
                 >
                   <span
                     className={cn(
-                      "inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/78 text-muted-foreground",
-                      active && "border-white/12 bg-white/14 text-primary-foreground",
+                      "inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-small)] border border-border bg-background text-muted-foreground",
+                      active && "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground",
                     )}
                   >
                     <Icon className="size-[0.9rem]" />

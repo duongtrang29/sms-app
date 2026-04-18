@@ -3,20 +3,30 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { listCourses } from "@/features/courses/queries";
-import { listCourseOfferings } from "@/features/course-offerings/queries";
+import { listCoursesByIds } from "@/features/courses/queries";
+import { listCourseOfferingsByIds } from "@/features/course-offerings/queries";
 import { listStudentEnrollments } from "@/features/enrollments/queries";
 import { listStudentGrades } from "@/features/grades/queries";
-import { listSemesters } from "@/features/semesters/queries";
+import { listSemestersByIds } from "@/features/semesters/queries";
 import { formatScore } from "@/lib/format";
 
 export default async function StudentGradesPage() {
-  const [courses, enrollments, grades, offerings, semesters] = await Promise.all([
-    listCourses(),
+  const [enrollments, grades] = await Promise.all([
     listStudentEnrollments(),
     listStudentGrades(),
-    listCourseOfferings(),
-    listSemesters(),
+  ]);
+
+  const offeringIds = [
+    ...new Set(enrollments.map((enrollment) => enrollment.course_offering_id)),
+  ];
+  const offerings = await listCourseOfferingsByIds(offeringIds);
+
+  const courseIds = [...new Set(offerings.map((offering) => offering.course_id))];
+  const semesterIds = [...new Set(offerings.map((offering) => offering.semester_id))];
+
+  const [courses, semesters] = await Promise.all([
+    listCoursesByIds(courseIds),
+    listSemestersByIds(semesterIds),
   ]);
 
   const courseMap = new Map(courses.map((course) => [course.id, course]));

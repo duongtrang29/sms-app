@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { publicEnv } from "@/lib/env";
+import { supabaseResilientFetch } from "@/lib/network/resilient-fetch";
 import type { Database } from "@/types/database";
 
 export async function updateSession(request: NextRequest) {
@@ -30,6 +31,9 @@ export async function updateSession(request: NextRequest) {
             response.cookies.set(name, value, options);
           });
         },
+      },
+      global: {
+        fetch: supabaseResilientFetch,
       },
     },
   );

@@ -95,6 +95,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${statusFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm mã phòng, tên phòng, tòa nhà"
           searchValue={queryValue}
           selects={[

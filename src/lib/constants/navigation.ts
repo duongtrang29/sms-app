@@ -114,7 +114,7 @@ export const navigationItems: NavItem[] = [
     section: "admin",
   },
   {
-    href: "/lecturer/offerings",
+    href: "/lecturer/courses",
     icon: "offerings",
     label: "Lớp giảng dạy",
     roles: ["LECTURER"],
@@ -135,7 +135,7 @@ export const navigationItems: NavItem[] = [
     section: "teaching",
   },
   {
-    href: "/student/enrollments",
+    href: "/student/enrollment",
     icon: "offerings",
     label: "Đăng ký học phần",
     roles: ["STUDENT"],

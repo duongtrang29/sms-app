@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { RefreshCwIcon } from "lucide-react";
 
@@ -23,7 +23,7 @@ export function PageErrorState({
           action={
             reset ? (
               <Button onClick={() => reset()} type="button" variant="outline">
-                <RefreshCwIcon data-icon="inline-start" />
+                <RefreshCwIcon className="size-4" data-icon="inline-start" />
                 Thử lại
               </Button>
             ) : undefined

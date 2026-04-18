@@ -7,11 +7,10 @@ import {
   UploadIcon,
   UsersIcon,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import { StudentsTable } from "@/components/dashboard/students-table";
 import { FormAlert } from "@/components/forms/form-alert";
 import { StudentForm } from "@/components/forms/student-form";
-import { StudentImportForm } from "@/components/forms/student-import-form";
 import { FormCardSkeleton } from "@/components/forms/form-container";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
@@ -21,7 +20,11 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAcademicClasses } from "@/features/academic-classes/queries";
-import { getStudentById, listStudents } from "@/features/students/queries";
+import {
+  getStudentById,
+  listStudentsSnapshot,
+  type StudentRecord,
+} from "@/features/students/queries";
 import {
   buildCreatePath,
   buildImportPath,
@@ -30,9 +33,50 @@ import {
 } from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 
+const StudentsTable = dynamic(
+  () =>
+    import("@/components/dashboard/students-table").then(
+      (module) => module.StudentsTable,
+    ),
+  {
+    loading: () => (
+      <div className="app-subtle-surface p-4 text-caption text-muted-foreground">
+        Đang tải bảng sinh viên...
+      </div>
+    ),
+  },
+);
+
+const StudentImportForm = dynamic(
+  () =>
+    import("@/components/forms/student-import-form").then(
+      (module) => module.StudentImportForm,
+    ),
+  {
+    loading: () => (
+      <div className="app-subtle-surface p-4 text-caption text-muted-foreground">
+        Đang tải biểu mẫu import...
+      </div>
+    ),
+  },
+);
+
 type StudentsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const ACCESS_STATUS_FILTERS: ReadonlyArray<StudentRecord["access_status"]> = [
+  "ACTIVE",
+  "INACTIVE",
+  "LOCKED",
+];
+
+const ACADEMIC_STATUS_FILTERS: ReadonlyArray<StudentRecord["current_status"]> = [
+  "ACTIVE",
+  "SUSPENDED",
+  "GRADUATED",
+  "DROPPED",
+];
 
 async function StudentEditorCard({
   academicClasses,
@@ -63,13 +107,31 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const editId = getSearchParamString(resolvedSearchParams, "edit") || null;
   const error = getSearchParamString(resolvedSearchParams, "error");
   const queryValue = getSearchParamString(resolvedSearchParams, "q");
-  const query = queryValue.toLowerCase();
   const success = getSearchParamString(resolvedSearchParams, "success");
   const mode = getSearchParamString(resolvedSearchParams, "mode");
 
-  const [academicClasses, students] = await Promise.all([
+  const normalizedAccessFilter = ACCESS_STATUS_FILTERS.includes(
+    accessFilter as StudentRecord["access_status"],
+  )
+    ? (accessFilter as StudentRecord["access_status"])
+    : undefined;
+  const normalizedAcademicFilter = ACADEMIC_STATUS_FILTERS.includes(
+    academicFilter as StudentRecord["current_status"],
+  )
+    ? (academicFilter as StudentRecord["current_status"])
+    : undefined;
+  const normalizedClassFilter = classFilter || undefined;
+  const studentFilters = {
+    limit: 500,
+    ...(normalizedClassFilter ? { academicClassId: normalizedClassFilter } : {}),
+    ...(normalizedAccessFilter ? { accessStatus: normalizedAccessFilter } : {}),
+    ...(normalizedAcademicFilter ? { currentStatus: normalizedAcademicFilter } : {}),
+    ...(queryValue ? { query: queryValue } : {}),
+  };
+
+  const [academicClasses, studentsSnapshot] = await Promise.all([
     listAcademicClasses(),
-    listStudents(),
+    listStudentsSnapshot(studentFilters),
   ]);
 
   const classMap = new Map(
@@ -78,7 +140,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       `${academicClass.code} - ${academicClass.name}`,
     ]),
   );
-  const allRows = students.map((student) => ({
+  const rows = studentsSnapshot.items.map((student) => ({
     academic_class_code: classMap.get(student.academic_class_id) ?? "Chưa có",
     academic_class_id: student.academic_class_id,
     access_status: student.access_status,
@@ -87,36 +149,6 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     id: student.id,
     student_code: student.student_code,
   }));
-
-  const rows = allRows.filter((student) => {
-    if (
-      query &&
-      ![
-        student.student_code,
-        student.full_name,
-        student.academic_class_code,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    ) {
-      return false;
-    }
-
-    if (accessFilter && student.access_status !== accessFilter) {
-      return false;
-    }
-
-    if (academicFilter && student.current_status !== academicFilter) {
-      return false;
-    }
-
-    if (classFilter && student.academic_class_id !== classFilter) {
-      return false;
-    }
-
-    return true;
-  });
 
   const classOptions = mapOptions(
     academicClasses,
@@ -164,21 +196,21 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           icon={<UsersIcon className="size-4" />}
           label="Tổng sinh viên"
           tone="primary"
-          value={allRows.length}
+          value={studentsSnapshot.summary.totalStudents}
         />
         <StatCard
           description="Tài khoản có thể đăng nhập hệ thống."
           icon={<ShieldCheckIcon className="size-4" />}
           label="Truy cập khả dụng"
           tone="success"
-          value={allRows.filter((row) => row.access_status === "ACTIVE").length}
+          value={studentsSnapshot.summary.activeAccess}
         />
         <StatCard
           description="Sinh viên đang học tập bình thường."
           icon={<GraduationCapIcon className="size-4" />}
           label="Đang học"
           tone="info"
-          value={allRows.filter((row) => row.current_status === "ACTIVE").length}
+          value={studentsSnapshot.summary.activeAcademic}
         />
         <StatCard
           description="Số bản ghi đang hiển thị theo bộ lọc."
@@ -190,6 +222,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${accessFilter}|${academicFilter}|${classFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm MSSV, họ tên, lớp"
           searchValue={queryValue}
           selects={[

@@ -101,6 +101,7 @@ export default async function DepartmentsPage({
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${statusFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm mã khoa, tên khoa, mô tả"
           searchValue={queryValue}
           selects={[

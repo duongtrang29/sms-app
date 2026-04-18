@@ -15,6 +15,24 @@ export async function listSemesters() {
   return data as Semester[];
 }
 
+export async function listSemestersByIds(ids: string[]) {
+  if (!ids.length) {
+    return [] as Semester[];
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("semesters")
+    .select("*")
+    .in("id", ids as never);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Semester[];
+}
+
 export async function getSemesterById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

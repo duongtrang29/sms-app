@@ -6,8 +6,8 @@ import {
   PlusIcon,
   Rows3Icon,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import { CourseOfferingsTable } from "@/components/dashboard/course-offerings-table";
 import { CourseOfferingForm } from "@/components/forms/course-offering-form";
 import { FormAlert } from "@/components/forms/form-alert";
 import { FormCardSkeleton } from "@/components/forms/form-container";
@@ -20,8 +20,8 @@ import { Button } from "@/components/ui/button";
 import { listCourses } from "@/features/courses/queries";
 import {
   getCourseOfferingById,
-  listCourseOfferings,
-  listPrimaryTeachingAssignments,
+  listAdminCourseOfferingSnapshot,
+  listPrimaryTeachingAssignmentsForOfferings,
 } from "@/features/course-offerings/queries";
 import { listLecturers } from "@/features/lecturers/queries";
 import { listSemesters } from "@/features/semesters/queries";
@@ -33,9 +33,31 @@ import {
 import { mapOptions } from "@/lib/options";
 import type { SelectOption } from "@/types/forms";
 
+const CourseOfferingsTable = dynamic(
+  () =>
+    import("@/components/dashboard/course-offerings-table").then(
+      (module) => module.CourseOfferingsTable,
+    ),
+  {
+    loading: () => (
+      <div className="app-subtle-surface p-4 text-caption text-muted-foreground">
+        Đang tải bảng học phần mở...
+      </div>
+    ),
+  },
+);
+
 type OfferingsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const OFFERING_STATUS_FILTERS = [
+  "DRAFT",
+  "OPEN",
+  "CLOSED",
+  "FINISHED",
+  "CANCELLED",
+] as const;
 
 async function CourseOfferingEditorCard({
   courseOptions,
@@ -69,7 +91,7 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
   const editId = getSearchParamString(resolvedSearchParams, "edit") || null;
   const error = getSearchParamString(resolvedSearchParams, "error");
   const queryValue = getSearchParamString(resolvedSearchParams, "q");
-  const query = queryValue.toLowerCase();
+  const query = queryValue.trim().toLowerCase();
   const semesterFilter = getSearchParamString(resolvedSearchParams, "semester");
   const success = getSearchParamString(resolvedSearchParams, "success");
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
@@ -81,15 +103,27 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
   ]);
   const isCreateOpen = mode === "create";
   const isEditorOpen = isCreateOpen || Boolean(editId);
+  const normalizedStatusFilter = OFFERING_STATUS_FILTERS.includes(
+    statusFilter as (typeof OFFERING_STATUS_FILTERS)[number],
+  )
+    ? (statusFilter as (typeof OFFERING_STATUS_FILTERS)[number])
+    : undefined;
+  const offeringFilters = {
+    limit: 500,
+    ...(semesterFilter ? { semesterId: semesterFilter } : {}),
+    ...(normalizedStatusFilter ? { status: normalizedStatusFilter } : {}),
+  };
 
-  const [courses, offerings, lecturers, primaryAssignments, semesters] =
+  const [courses, offeringsSnapshot, lecturers, semesters] =
     await Promise.all([
       listCourses(),
-      listCourseOfferings(),
+      listAdminCourseOfferingSnapshot(offeringFilters),
       listLecturers(),
-      listPrimaryTeachingAssignments(),
       listSemesters(),
     ]);
+  const primaryAssignments = await listPrimaryTeachingAssignmentsForOfferings(
+    offeringsSnapshot.items.map((offering) => offering.id),
+  );
 
   const courseMap = new Map(
     courses.map((course) => [course.id, `${course.code} - ${course.name}`]),
@@ -113,7 +147,7 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
     ]),
   );
 
-  const allRows = offerings.map((offering) => ({
+  const allRows = offeringsSnapshot.items.map((offering) => ({
     courseName: courseMap.get(offering.course_id) ?? "Chưa có",
     enrollment: `${offering.enrolled_count}/${offering.max_capacity}`,
     id: offering.id,
@@ -127,7 +161,7 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
 
   const rows = allRows.filter((offering) => {
     if (
-      query &&
+      query.length > 0 &&
       ![
         offering.courseName,
         offering.lecturerName,
@@ -140,15 +174,6 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
     ) {
       return false;
     }
-
-    if (semesterFilter && offering.semesterId !== semesterFilter) {
-      return false;
-    }
-
-    if (statusFilter && offering.status !== statusFilter) {
-      return false;
-    }
-
     return true;
   });
 
@@ -187,25 +212,21 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
           icon={<ClipboardListIcon className="size-4" />}
           label="Tổng học phần mở"
           tone="primary"
-          value={allRows.length}
+          value={offeringsSnapshot.summary.totalOfferings}
         />
         <StatCard
           description="Học phần hiện còn đang mở cho sinh viên đăng ký."
           icon={<BookOpenIcon className="size-4" />}
           label="Đang mở"
           tone="info"
-          value={allRows.filter((row) => row.status === "OPEN").length}
+          value={offeringsSnapshot.summary.openOfferings}
         />
         <StatCard
           description="Học phần đã hoàn tất hoặc đóng đăng ký."
           icon={<Rows3Icon className="size-4" />}
           label="Đã đóng / kết thúc"
           tone="neutral"
-          value={
-            allRows.filter(
-              (row) => row.status === "CLOSED" || row.status === "FINISHED",
-            ).length
-          }
+          value={offeringsSnapshot.summary.closedOrFinishedOfferings}
         />
         <StatCard
           description="Số dòng còn lại theo bộ lọc hiện tại."
@@ -220,6 +241,7 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${semesterFilter}|${statusFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm môn học, giảng viên, nhóm, học kỳ"
           searchValue={queryValue}
           selects={[

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 
@@ -16,7 +16,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type RoutePanelProps = {
@@ -31,12 +30,12 @@ type RoutePanelProps = {
   variant?: "dialog" | "drawer";
 };
 
-const dialogSizeClassNameMap = {
+const dialogSizeMap = {
   lg: "max-w-4xl",
   xl: "max-w-6xl",
 } as const;
 
-const drawerSizeClassNameMap = {
+const drawerSizeMap = {
   lg: "sm:max-w-2xl",
   xl: "sm:max-w-4xl",
 } as const;
@@ -46,30 +45,27 @@ function PanelHeader({
   description,
   icon,
   title,
-}: Pick<RoutePanelProps, "badge" | "description" | "icon" | "title">) {
+}: {
+  badge: string | undefined;
+  description: string | undefined;
+  icon: React.ReactNode | undefined;
+  title: string;
+}) {
   return (
-    <div className="flex items-start gap-4">
+    <div className="flex items-start gap-3">
       {icon ? (
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,246,255,0.94))] text-[color:var(--color-info-foreground)] shadow-[0_18px_36px_-28px_rgba(46,77,175,0.4)]">
+        <div className="inline-flex size-10 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-blue-600">
           {icon}
         </div>
       ) : null}
-      <div className="min-w-0 space-y-2">
+      <div className="min-w-0">
         {badge ? (
-          <Badge className="h-6 px-2.5 text-[0.68rem] uppercase tracking-[0.18em]" variant="info">
+          <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500">
             {badge}
-          </Badge>
+          </span>
         ) : null}
-        <div className="space-y-1">
-          <div className="text-xl font-semibold tracking-[-0.04em] text-foreground">
-            {title}
-          </div>
-          {description ? (
-            <div className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              {description}
-            </div>
-          ) : null}
-        </div>
+        <h2 className="mt-1 text-base font-medium text-gray-900">{title}</h2>
+        {description ? <p className="mt-1 text-sm text-gray-700">{description}</p> : null}
       </div>
     </div>
   );
@@ -98,33 +94,16 @@ export function RoutePanel({
     }
   };
 
-  const panelHeaderProps = {
-    title,
-    ...(badge !== undefined ? { badge } : {}),
-    ...(description !== undefined ? { description } : {}),
-    ...(icon !== undefined ? { icon } : {}),
-  } satisfies Pick<RoutePanelProps, "badge" | "description" | "icon" | "title">;
-
   if (variant === "drawer") {
     return (
       <Sheet onOpenChange={handleOpenChange} open={open}>
-        <SheetContent
-          className={cn(
-            "w-full overflow-hidden p-0",
-            drawerSizeClassNameMap[size],
-          )}
-          side="right"
-        >
-          <SheetHeader className="border-b border-border/70 px-6 py-5">
+        <SheetContent className={cn("w-full p-0", drawerSizeMap[size])} side="right">
+          <SheetHeader className="border-b border-gray-200 px-5 py-4">
             <SheetTitle className="sr-only">{title}</SheetTitle>
-            <SheetDescription className="sr-only">
-              {description ?? title}
-            </SheetDescription>
-            <PanelHeader {...panelHeaderProps} />
+            <SheetDescription className="sr-only">{description ?? title}</SheetDescription>
+            <PanelHeader badge={badge} description={description} icon={icon} title={title} />
           </SheetHeader>
-          <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            {children}
-          </div>
+          <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
         </SheetContent>
       </Sheet>
     );
@@ -132,22 +111,13 @@ export function RoutePanel({
 
   return (
     <Dialog onOpenChange={handleOpenChange} open={open}>
-      <DialogContent
-        className={cn(
-          "overflow-hidden p-0",
-          dialogSizeClassNameMap[size],
-        )}
-      >
-        <DialogHeader className="border-b border-border/70 px-6 py-5">
+      <DialogContent className={cn("p-0", dialogSizeMap[size])}>
+        <DialogHeader className="border-b border-gray-200 px-5 py-4">
           <DialogTitle className="sr-only">{title}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {description ?? title}
-          </DialogDescription>
-          <PanelHeader {...panelHeaderProps} />
+          <DialogDescription className="sr-only">{description ?? title}</DialogDescription>
+          <PanelHeader badge={badge} description={description} icon={icon} title={title} />
         </DialogHeader>
-        <div className="app-scrollbar max-h-[calc(100vh-11rem)] overflow-y-auto px-6 py-5">
-          {children}
-        </div>
+        <div className="app-scrollbar max-h-[calc(100vh-10rem)] overflow-y-auto px-5 py-4">{children}</div>
       </DialogContent>
     </Dialog>
   );

@@ -1,6 +1,6 @@
 "use server";
 
-import { createAuditLog } from "@/lib/audit";
+import { tryCreateAuditLog } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppRole, ProfileStatus } from "@/types/app";
 
@@ -27,7 +27,25 @@ type UpdateManagedUserInput = {
   userId: string;
 };
 
-export async function createManagedUser(input: CreateManagedUserInput) {
+type StepStatus = "failed" | "skipped" | "success";
+
+export type ManagedUserCreateResult = {
+  status: "partial" | "success";
+  userId: string;
+  warning?: string;
+};
+
+export type ManagedUserUpdateResult = {
+  auditStep: StepStatus;
+  authStep: StepStatus;
+  message?: string;
+  profileStep: StepStatus;
+  status: "failed" | "partial" | "success";
+};
+
+export async function createManagedUser(
+  input: CreateManagedUserInput,
+): Promise<ManagedUserCreateResult> {
   const admin = createAdminClient();
   const authPayload = {
     email: input.email,
@@ -67,7 +85,7 @@ export async function createManagedUser(input: CreateManagedUserInput) {
     throw new Error(profileError.message);
   }
 
-  await createAuditLog({
+  const auditResult = await tryCreateAuditLog({
     action: "USER_PROVISIONED",
     entityId: data.user.id,
     entityType: "profiles",
@@ -78,10 +96,24 @@ export async function createManagedUser(input: CreateManagedUserInput) {
     targetUserId: data.user.id,
   });
 
-  return data.user.id;
+  if (auditResult.status !== "success") {
+    return {
+      status: "partial",
+      userId: data.user.id,
+      warning:
+        "Đã tạo tài khoản và hồ sơ nhưng không ghi được audit log. Vui lòng kiểm tra nhật ký hệ thống.",
+    };
+  }
+
+  return {
+    status: "success",
+    userId: data.user.id,
+  };
 }
 
-export async function updateManagedUser(input: UpdateManagedUserInput) {
+export async function updateManagedUser(
+  input: UpdateManagedUserInput,
+): Promise<ManagedUserUpdateResult> {
   const admin = createAdminClient();
   const profilePayload: Record<string, unknown> = {
     full_name: input.fullName,
@@ -97,14 +129,7 @@ export async function updateManagedUser(input: UpdateManagedUserInput) {
     profilePayload.must_change_password = input.mustChangePassword;
   }
 
-  const { error: profileError } = await admin
-    .from("profiles")
-    .update(profilePayload as never)
-    .eq("id", input.userId);
-
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
+  let authStep: StepStatus = "skipped";
 
   if (input.password) {
     const { error: authError } = await admin.auth.admin.updateUserById(
@@ -115,16 +140,69 @@ export async function updateManagedUser(input: UpdateManagedUserInput) {
     );
 
     if (authError) {
-      throw new Error(authError.message);
+      return {
+        auditStep: "skipped",
+        authStep: "failed",
+        message: `Không thể cập nhật mật khẩu người dùng: ${authError.message}`,
+        profileStep: "skipped",
+        status: "failed",
+      };
     }
+
+    authStep = "success";
   }
 
-  await createAuditLog({
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update(profilePayload as never)
+    .eq("id", input.userId);
+
+  if (profileError) {
+    if (authStep === "success") {
+      return {
+        auditStep: "skipped",
+        authStep,
+        message:
+          `Đã cập nhật mật khẩu nhưng không cập nhật được hồ sơ: ${profileError.message}. ` +
+          "Vui lòng đồng bộ lại hồ sơ người dùng.",
+        profileStep: "failed",
+        status: "partial",
+      };
+    }
+
+    return {
+      auditStep: "skipped",
+      authStep,
+      message: profileError.message,
+      profileStep: "failed",
+      status: "failed",
+    };
+  }
+
+  const auditResult = await tryCreateAuditLog({
     action: "USER_UPDATED",
     entityId: input.userId,
     entityType: "profiles",
     targetUserId: input.userId,
   });
+
+  if (auditResult.status !== "success") {
+    return {
+      auditStep: "failed",
+      authStep,
+      message:
+        "Đã cập nhật thông tin người dùng nhưng không ghi được audit log. Vui lòng kiểm tra nhật ký hệ thống.",
+      profileStep: "success",
+      status: "partial",
+    };
+  }
+
+  return {
+    auditStep: "success",
+    authStep,
+    profileStep: "success",
+    status: "success",
+  };
 }
 
 export async function deleteManagedUser(userId: string) {

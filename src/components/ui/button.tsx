@@ -1,63 +1,134 @@
-"use client"
+﻿"use client";
 
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2Icon } from "lucide-react";
+import { useFormStatus } from "react-dom";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-xl border border-transparent bg-clip-padding text-sm font-semibold whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+const buttonStyles = cva(
+  "inline-flex items-center justify-center gap-2 rounded-[var(--radius-medium)] border text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
   {
     variants: {
-      variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-[0_18px_34px_-20px_rgba(67,92,230,0.75)] hover:bg-primary/92",
-        outline:
-          "border-border/80 bg-background/90 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] hover:bg-accent/80 hover:text-foreground aria-expanded:bg-accent/70 aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/85 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        success:
-          "bg-[color:var(--color-success)] text-white shadow-[0_18px_34px_-20px_rgba(24,132,93,0.6)] hover:bg-[color:var(--color-success)]/92",
-        ghost:
-          "hover:bg-muted/80 hover:text-foreground aria-expanded:bg-muted/80 aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-[color:var(--color-danger)] text-white shadow-[0_18px_34px_-20px_rgba(190,69,69,0.58)] hover:bg-[color:var(--color-danger)]/92 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
       size: {
-        default:
-          "h-10 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
-        xs: "h-7 gap-1 rounded-lg px-2.5 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-9 gap-1.5 rounded-xl px-3.5 text-[0.82rem] in-data-[slot=button-group]:rounded-xl has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-11 gap-2 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
-        icon: "size-10",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-9 rounded-xl in-data-[slot=button-group]:rounded-xl",
-        "icon-lg": "size-11",
+        default: "h-11 px-4",
+        lg: "h-12 px-5",
+        sm: "h-10 px-3.5",
+        xs: "h-8 px-3 text-xs",
+        icon: "size-11",
+        "icon-lg": "size-12",
+        "icon-sm": "size-10",
+        "icon-xs": "size-8",
+      },
+      tone: {
+        primary:
+          "border-primary bg-primary text-primary-foreground hover:bg-[#1D4ED8] active:bg-[#1E40AF] disabled:bg-primary/55",
+        secondary:
+          "border-border bg-card text-foreground hover:bg-muted active:bg-slate-100 disabled:bg-muted",
+        outline:
+          "border-border bg-transparent text-foreground hover:bg-muted active:bg-slate-100",
+        ghost:
+          "border-transparent bg-transparent text-foreground hover:bg-muted active:bg-slate-100",
+        danger:
+          "border-[color:var(--color-danger)] bg-[color:var(--color-danger)] text-white hover:bg-[#B91C1C] active:bg-[#991B1B]",
+        success:
+          "border-[color:var(--color-success)] bg-[color:var(--color-success)] text-white hover:bg-[#15803D] active:bg-[#166534]",
       },
     },
     defaultVariants: {
-      variant: "default",
       size: "default",
+      tone: "primary",
     },
+  },
+);
+
+type ButtonVariant =
+  | "default"
+  | "destructive"
+  | "ghost"
+  | "link"
+  | "outline"
+  | "primary"
+  | "secondary"
+  | "success";
+
+type ButtonSize = NonNullable<VariantProps<typeof buttonStyles>["size"]>;
+
+type PrimitiveButtonProps = Omit<ButtonPrimitive.Props, "className"> & {
+  className?: string | undefined;
+};
+
+function resolveTone(variant: ButtonVariant) {
+  if (variant === "ghost") {
+    return "ghost";
   }
-)
+
+  if (variant === "outline" || variant === "secondary" || variant === "link") {
+    return "outline";
+  }
+
+  if (variant === "destructive") {
+    return "danger";
+  }
+
+  if (variant === "success") {
+    return "success";
+  }
+
+  return "primary";
+}
+
+function buttonVariants({
+  className,
+  size = "default",
+  variant = "default",
+}: {
+  className?: string | undefined;
+  size?: ButtonSize;
+  variant?: ButtonVariant;
+} = {}) {
+  return cn(buttonStyles({ size, tone: resolveTone(variant) }), className);
+}
 
 function Button({
   className,
+  pendingLabel = "Đang xử lý",
   variant = "default",
   size = "default",
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: PrimitiveButtonProps & {
+  pendingLabel?: string;
+  size?: ButtonSize;
+  variant?: ButtonVariant;
+}) {
+  const { pending } = useFormStatus();
+  const isSubmitIntent = props.type !== "button";
+  const isDisabled = props.disabled || (isSubmitIntent && pending);
+  const isIconOnly = typeof size === "string" && size.startsWith("icon");
+
   return (
     <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
-  )
+      aria-busy={isSubmitIntent && pending}
+      className={buttonVariants({ className, size, variant })}
+      data-slot="button"
+      disabled={isDisabled}
+    >
+      {pending && isSubmitIntent ? (
+        <>
+          <Loader2Icon
+            aria-hidden="true"
+            className="size-4 animate-spin"
+            data-icon="inline-start"
+          />
+          {isIconOnly ? <span className="sr-only">{pendingLabel}</span> : pendingLabel}
+        </>
+      ) : (
+        props.children
+      )}
+    </ButtonPrimitive>
+  );
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants };

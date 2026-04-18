@@ -10,7 +10,7 @@ import {
   getSafeReturnPath,
   getStringField,
 } from "@/lib/admin-routing";
-import { createAuditLog } from "@/lib/audit";
+import { tryCreateAuditLog } from "@/lib/audit";
 import {
   createManagedUser,
   deleteManagedUser,
@@ -45,6 +45,7 @@ export async function upsertStudentAction(
   }
 
   const admin = createAdminClient();
+  let warningMessage: string | null = null;
 
   try {
     const studentPayload = {
@@ -59,13 +60,26 @@ export async function upsertStudentAction(
     };
 
     if (parsed.data.id) {
-      await updateManagedUser({
+      const managedUpdateResult = await updateManagedUser({
         fullName: parsed.data.full_name,
         phone: parsed.data.phone || null,
         status: parsed.data.access_status,
         userId: parsed.data.id,
         ...(parsed.data.password ? { password: parsed.data.password } : {}),
       });
+
+      if (
+        managedUpdateResult.status === "failed" ||
+        managedUpdateResult.profileStep !== "success"
+      ) {
+        return failure(
+          managedUpdateResult.message ?? "Không thể cập nhật tài khoản sinh viên.",
+        );
+      }
+
+      if (managedUpdateResult.status === "partial") {
+        warningMessage = managedUpdateResult.message ?? warningMessage;
+      }
 
       const { error } = await admin
         .from("students")
@@ -87,18 +101,23 @@ export async function upsertStudentAction(
         );
       }
 
-      await createAuditLog({
+      const auditResult = await tryCreateAuditLog({
         action: "STUDENT_UPDATED",
         entityId: parsed.data.id,
         entityType: "students",
         targetUserId: parsed.data.id,
       });
+
+      if (auditResult.status !== "success") {
+        warningMessage =
+          "Đã cập nhật dữ liệu sinh viên nhưng không ghi được audit log.";
+      }
     } else {
       if (!parsed.data.password) {
         return failure("Mật khẩu khởi tạo là bắt buộc khi tạo sinh viên.");
       }
 
-      const userId = await createManagedUser({
+      const managedCreateResult = await createManagedUser({
         email: parsed.data.email,
         fullName: parsed.data.full_name,
         password: parsed.data.password,
@@ -106,6 +125,11 @@ export async function upsertStudentAction(
         role: "STUDENT",
         status: parsed.data.access_status,
       });
+      const userId = managedCreateResult.userId;
+
+      if (managedCreateResult.status === "partial") {
+        warningMessage = managedCreateResult.warning ?? warningMessage;
+      }
 
       const { error } = await admin.from("students").insert({
         ...studentPayload,
@@ -128,12 +152,17 @@ export async function upsertStudentAction(
         );
       }
 
-      await createAuditLog({
+      const auditResult = await tryCreateAuditLog({
         action: "STUDENT_CREATED",
         entityId: userId,
         entityType: "students",
         targetUserId: userId,
       });
+
+      if (auditResult.status !== "success") {
+        warningMessage =
+          "Đã tạo hồ sơ sinh viên nhưng không ghi được audit log.";
+      }
     }
   } catch (error) {
     const message =
@@ -163,7 +192,13 @@ export async function upsertStudentAction(
   redirectToStudents(
     returnPath,
     "success",
-    parsed.data.id ? "Đã cập nhật sinh viên." : "Đã tạo sinh viên mới.",
+    parsed.data.id
+      ? warningMessage
+        ? `Đã cập nhật sinh viên (cảnh báo: ${warningMessage})`
+        : "Đã cập nhật sinh viên."
+      : warningMessage
+        ? `Đã tạo sinh viên mới (cảnh báo: ${warningMessage})`
+        : "Đã tạo sinh viên mới.",
   );
 }
 
@@ -237,7 +272,7 @@ export async function importStudentsAction(
         continue;
       }
 
-      const userId = await createManagedUser({
+      const managedCreateResult = await createManagedUser({
         email: row.email,
         fullName: row.full_name,
         password: row.password || `${row.student_code}@Sms2026`,
@@ -245,6 +280,7 @@ export async function importStudentsAction(
         role: "STUDENT",
         status: "ACTIVE",
       });
+      const userId = managedCreateResult.userId;
 
       const { error: studentError } = await admin.from("students").insert({
         academic_class_id: academicClassId,
@@ -261,6 +297,10 @@ export async function importStudentsAction(
       if (studentError) {
         await deleteManagedUser(userId);
         errors.push(studentError.message);
+      } else if (managedCreateResult.status === "partial") {
+        errors.push(
+          `Sinh viên ${row.student_code} đã tạo nhưng thiếu audit log hệ thống.`,
+        );
       }
     } catch (error) {
       errors.push(error instanceof Error ? error.message : "Import lỗi.");
@@ -304,7 +344,7 @@ export async function toggleStudentStatusFormAction(formData: FormData) {
     redirectToStudents(returnPath, "error", error.message);
   }
 
-  await createAuditLog({
+  const auditResult = await tryCreateAuditLog({
     action: nextStatus === "ACTIVE" ? "STUDENT_ACTIVATED" : "STUDENT_DEACTIVATED",
     entityId: studentId,
     entityType: "profiles",
@@ -313,6 +353,14 @@ export async function toggleStudentStatusFormAction(formData: FormData) {
     },
     targetUserId: studentId,
   });
+
+  if (auditResult.status !== "success") {
+    redirectToStudents(
+      returnPath,
+      "error",
+      "Đã cập nhật trạng thái tài khoản nhưng không ghi được audit log.",
+    );
+  }
 
   revalidatePath("/admin/students");
   redirectToStudents(

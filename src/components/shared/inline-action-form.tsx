@@ -36,9 +36,9 @@ type InlineActionSubmitButtonProps = {
   iconOnly: boolean;
   label: string;
   pendingLabel: string | undefined;
-  size: ComponentProps<typeof Button>["size"];
+  size: NonNullable<ComponentProps<typeof Button>["size"]>;
   tooltip?: string | undefined;
-  variant: ComponentProps<typeof Button>["variant"];
+  variant: NonNullable<ComponentProps<typeof Button>["variant"]>;
 };
 
 function InlineActionSubmitButton({

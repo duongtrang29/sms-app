@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { failure, parseWithSchema } from "@/lib/actions";
+import { buildPathWithUpdates } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
 import { matchServerFieldErrors } from "@/lib/form-errors";
@@ -28,9 +29,7 @@ function redirectToDepartments(
   type: "error" | "success",
   message: string,
 ): never {
-  const url = new URL(`http://local${returnPath}`);
-  url.searchParams.set(type, message);
-  redirect(`${url.pathname}?${url.searchParams.toString()}`);
+  redirect(buildPathWithUpdates(returnPath, [[type, message]]));
 }
 
 export async function upsertDepartmentAction(

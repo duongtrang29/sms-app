@@ -44,7 +44,7 @@ export default async function LecturerOfferingsPage() {
                 </div>
                 <Link
                   className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
-                  href={`/lecturer/offerings/${offering.id}`}
+                  href={`/lecturer/grades/${offering.id}`}
                 >
                   Mở bảng điểm
                 </Link>

@@ -101,6 +101,7 @@ export default async function SemestersPage({
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${currentFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm mã học kỳ, tên học kỳ, năm học"
           searchValue={queryValue}
           selects={[

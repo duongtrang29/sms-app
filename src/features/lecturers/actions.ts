@@ -9,7 +9,7 @@ import {
   getSafeReturnPath,
   getStringField,
 } from "@/lib/admin-routing";
-import { createAuditLog } from "@/lib/audit";
+import { tryCreateAuditLog } from "@/lib/audit";
 import {
   createManagedUser,
   deleteManagedUser,
@@ -47,6 +47,7 @@ export async function upsertLecturerAction(
   }
 
   const admin = createAdminClient();
+  let warningMessage: string | null = null;
 
   try {
     const lecturerPayload = {
@@ -66,7 +67,20 @@ export async function upsertLecturerAction(
         ...(parsed.data.password ? { password: parsed.data.password } : {}),
       };
 
-      await updateManagedUser(updatePayload);
+      const managedUpdateResult = await updateManagedUser(updatePayload);
+
+      if (
+        managedUpdateResult.status === "failed" ||
+        managedUpdateResult.profileStep !== "success"
+      ) {
+        return failure(
+          managedUpdateResult.message ?? "Không thể cập nhật tài khoản giảng viên.",
+        );
+      }
+
+      if (managedUpdateResult.status === "partial") {
+        warningMessage = managedUpdateResult.message ?? warningMessage;
+      }
 
       const { error } = await admin
         .from("lecturers")
@@ -88,18 +102,23 @@ export async function upsertLecturerAction(
         );
       }
 
-      await createAuditLog({
+      const auditResult = await tryCreateAuditLog({
         action: "LECTURER_UPDATED",
         entityId: parsed.data.id,
         entityType: "lecturers",
         targetUserId: parsed.data.id,
       });
+
+      if (auditResult.status !== "success") {
+        warningMessage =
+          "Đã cập nhật dữ liệu giảng viên nhưng không ghi được audit log.";
+      }
     } else {
       if (!parsed.data.password) {
         return failure("Mật khẩu khởi tạo là bắt buộc khi tạo giảng viên.");
       }
 
-      const userId = await createManagedUser({
+      const managedCreateResult = await createManagedUser({
         email: parsed.data.email,
         fullName: parsed.data.full_name,
         password: parsed.data.password,
@@ -107,6 +126,11 @@ export async function upsertLecturerAction(
         role: "LECTURER",
         status: parsed.data.status,
       });
+      const userId = managedCreateResult.userId;
+
+      if (managedCreateResult.status === "partial") {
+        warningMessage = managedCreateResult.warning ?? warningMessage;
+      }
 
       const { error } = await admin.from("lecturers").insert({
         ...lecturerPayload,
@@ -129,12 +153,17 @@ export async function upsertLecturerAction(
         );
       }
 
-      await createAuditLog({
+      const auditResult = await tryCreateAuditLog({
         action: "LECTURER_CREATED",
         entityId: userId,
         entityType: "lecturers",
         targetUserId: userId,
       });
+
+      if (auditResult.status !== "success") {
+        warningMessage =
+          "Đã tạo hồ sơ giảng viên nhưng không ghi được audit log.";
+      }
     }
   } catch (error) {
     const message =
@@ -164,7 +193,13 @@ export async function upsertLecturerAction(
   redirectToLecturers(
     returnPath,
     "success",
-    parsed.data.id ? "Đã cập nhật giảng viên." : "Đã tạo giảng viên mới.",
+    parsed.data.id
+      ? warningMessage
+        ? `Đã cập nhật giảng viên (cảnh báo: ${warningMessage})`
+        : "Đã cập nhật giảng viên."
+      : warningMessage
+        ? `Đã tạo giảng viên mới (cảnh báo: ${warningMessage})`
+        : "Đã tạo giảng viên mới.",
   );
 }
 
@@ -198,7 +233,7 @@ export async function toggleLecturerStatusFormAction(formData: FormData) {
     redirectToLecturers(returnPath, "error", error.message);
   }
 
-  await createAuditLog({
+  const auditResult = await tryCreateAuditLog({
     action: nextStatus === "ACTIVE" ? "LECTURER_ACTIVATED" : "LECTURER_DEACTIVATED",
     entityId: lecturerId,
     entityType: "profiles",
@@ -207,6 +242,14 @@ export async function toggleLecturerStatusFormAction(formData: FormData) {
     },
     targetUserId: lecturerId,
   });
+
+  if (auditResult.status !== "success") {
+    redirectToLecturers(
+      returnPath,
+      "error",
+      "Đã cập nhật trạng thái tài khoản nhưng không ghi được audit log.",
+    );
+  }
 
   revalidatePath("/admin/lecturers");
   redirectToLecturers(

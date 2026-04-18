@@ -1,55 +1,248 @@
 # Student Management System
 
-Hệ thống quản lý sinh viên xây dựng bằng `Next.js 16 + TypeScript + Supabase`, phục vụ ba vai trò:
+Hệ thống quản lý sinh viên xây dựng bằng `Next.js 16.2 + TypeScript + Supabase`, phục vụ ba vai trò:
 
 - `ADMIN`
 - `LECTURER`
 - `STUDENT`
 
-Tài liệu này là hướng dẫn chính thức cho trạng thái hiện tại của repo. Mục tiêu là giúp bạn:
+Repo này đã có đủ route, server actions, schema và seed để chạy local, staging và production. Tài liệu dưới đây là cổng vào chính thức cho trạng thái hiện tại của codebase.
 
-- dựng hệ thống từ đầu trên môi trường mới
-- tạo tài khoản admin riêng của mình
-- chọn đúng chiến lược dữ liệu khởi tạo
-- chạy local, kiểm tra chất lượng và chuẩn bị deploy
+## 1. Tài liệu nên đọc
 
-## 1. Kiến trúc hiện tại
+- [Hướng dẫn sử dụng + setup DEV/PROD](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md)
+- [Kế hoạch kiểm thử theo báo cáo](./docs/guides/KIEM_THU_THEO_BAO_CAO.md)
 
-### 1.1 Stack
+Nếu bạn mới bắt đầu:
+
+1. đọc mục `Quickstart` bên dưới
+2. dựng local theo [docs/guides/HUONG_DAN_SU_DUNG_SETUP.md](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md)
+3. chạy checklist kiểm thử tại [docs/guides/KIEM_THU_THEO_BAO_CAO.md](./docs/guides/KIEM_THU_THEO_BAO_CAO.md)
+
+## 2. Stack hiện tại
 
 - Next.js 16 App Router
+- React 19
 - TypeScript strict
 - Tailwind CSS 4
 - shadcn/ui
-- Supabase Auth
-- Supabase PostgreSQL
+- Supabase Auth + PostgreSQL
 - React Hook Form + Zod
 - TanStack Table
 - Recharts
 
-### 1.2 Năng lực nghiệp vụ
+## 3. Năng lực nghiệp vụ hiện có
 
-- đăng nhập, đăng xuất, quên mật khẩu, đổi mật khẩu
+- đăng nhập, đăng xuất, quên mật khẩu, đặt lại mật khẩu
+- cập nhật hồ sơ cá nhân và đổi mật khẩu
 - phân quyền `ADMIN / LECTURER / STUDENT`
-- quản trị khoa, ngành, lớp sinh hoạt, học kỳ, phòng học
-- quản trị môn học, môn tiên quyết, học phần mở, phân công giảng dạy
-- quản trị sinh viên, giảng viên, import CSV sinh viên
-- quản trị lịch học, kiểm tra trùng phòng ở DB layer
-- đăng ký và hủy đăng ký học phần bằng RPC server-side
-- nhập điểm, duyệt điểm, khóa điểm, xử lý phúc khảo
+- quản lý khoa, ngành, lớp sinh hoạt, học kỳ, phòng học
+- quản lý môn học, môn tiên quyết, học phần mở, phân công giảng dạy
+- quản lý sinh viên, giảng viên, import CSV sinh viên
+- quản lý lịch học, chống trùng phòng ở DB layer
+- đăng ký và hủy đăng ký học phần qua RPC server-side
+- nhập điểm, lưu nháp, gửi duyệt, duyệt điểm, khóa/mở khóa điểm
+- gửi và xử lý phúc khảo
 - báo cáo tổng hợp và audit log
 
-### 1.3 Cấu trúc chính của repo
+## 4. Route chuẩn của hệ thống
+
+### Public / xác thực
+
+- `/` -> redirect sang `/dashboard`
+- `/login`
+- `/forgot-password`
+- `/reset-password`
+- `/auth/callback`
+
+### Dùng chung sau khi đăng nhập
+
+- `/dashboard` -> redirect sang trang chủ theo role
+- `/profile`
+
+### Admin
+
+- `/admin`
+- `/admin/students`
+- `/admin/lecturers`
+- `/admin/departments`
+- `/admin/majors`
+- `/admin/classes`
+- `/admin/semesters`
+- `/admin/courses`
+- `/admin/offerings`
+- `/admin/rooms`
+- `/admin/schedules`
+- `/admin/grades`
+- `/admin/regrade-requests`
+- `/admin/reports`
+- `/admin/audit-logs`
+
+### Lecturer
+
+- `/lecturer`
+- `/lecturer/courses`
+- `/lecturer/grades/[id]`
+- `/lecturer/schedule`
+- `/lecturer/regrade-requests`
+
+### Student
+
+- `/student`
+- `/student/enrollment`
+- `/student/schedule`
+- `/student/grades`
+- `/student/regrade-requests`
+
+### Legacy alias vẫn đang hoạt động
+
+- `/lecturer/offerings` -> alias cũ của danh sách lớp giảng dạy
+- `/lecturer/offerings/[offeringId]` -> alias cũ của bảng điểm giảng viên
+- `/student/enrollments` -> alias cũ của đăng ký học phần
+
+Tài liệu người dùng từ giờ dùng route chuẩn, không dùng alias cũ.
+
+## 5. Quickstart local
+
+### Bước 1: cài dependency
+
+```bash
+npm install
+```
+
+### Bước 2: tạo file env
+
+Tạo `.env.local` từ `.env.example`.
+
+```bash
+cp .env.example .env.local
+```
+
+Trên Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+### Bước 3: cấu hình Supabase trong `.env.local`
+
+Chỉ cần đảm bảo đúng 4 biến:
+
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+### Bước 4: chạy schema baseline duy nhất
+
+- `supabase/migrations/0001_schema.sql`
+
+Các migration lịch sử được lưu tại `supabase/migrations_archive/` để tra cứu, không dùng cho `db push` mới.
+Hướng dẫn chi tiết nằm ở [docs/guides/HUONG_DAN_SU_DUNG_SETUP.md](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md).
+
+### Bước 5: tạo admin đăng nhập (lệnh ngắn)
+
+```bash
+npm run admin:bootstrap
+```
+
+Mặc định script sẽ tạo/cập nhật:
+
+- Email: `admin@sms.local`
+- Password: `Admin@123456`
+- Role: `ADMIN`
+- Status: `ACTIVE`
+
+Muốn đổi thông tin thì sửa trong `.env.local`:
+
+- `ADMIN_BOOTSTRAP_EMAIL`
+- `ADMIN_BOOTSTRAP_PASSWORD`
+- `ADMIN_BOOTSTRAP_FULL_NAME`
+
+### Bước 6 (tuỳ chọn): nạp dữ liệu demo
+
+- demo nhẹ: `npm run seed:demo`
+- dataset ICTU đầy đủ: chạy `supabase/seed.sql`
+
+### Bước 7: chạy app
+
+```bash
+npm run dev
+```
+
+Mở `http://localhost:3000`.
+
+## 6. Các lệnh quan trọng
+
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npm run typecheck
+npm run check
+npm run test
+npm run test:sql
+npm run admin:bootstrap
+npm run setup:quick
+npm run seed:demo
+npm run reset:demo
+```
+
+`npm run test:sql` yêu cầu Docker Desktop đang chạy để Supabase local có thể `db reset`.
+
+## 7. Chiến lược dữ liệu khởi tạo
+
+### Khuyến nghị cho local dev nghiêm túc / staging / production
+
+- chạy `supabase/migrations/0001_schema.sql`
+- bootstrap admin riêng bằng `npm run admin:bootstrap`
+- không seed dữ liệu mẫu nếu không cần demo
+
+### Dùng `supabase/seed.sql`
+
+Phù hợp khi cần dataset ICTU nhiều dữ liệu để demo báo cáo, bảng điểm và phúc khảo.
+
+- mật khẩu mặc định: `Ictu@2026Seed`
+- admin mẫu: `daotao.admin@ictu.edu.vn`
+
+### Dùng `npm run seed:demo`
+
+Phù hợp khi cần dataset nhẹ hơn, reset nhanh bằng script.
+
+- mật khẩu mặc định: `Demo@123456`
+- admin mẫu: `admin.demo@sms.local`
+- lecturer mẫu: `ha.nguyen@sms.local`
+- student mẫu: `se22001@sms.local`
+
+## 8. Lưu ý môi trường production
+
+- app runtime và các script quản trị đều dùng `SUPABASE_SERVICE_ROLE_KEY` cho một số tác vụ quản trị người dùng, vì vậy biến này phải có trên server và tuyệt đối không được lộ phía client
+- `NEXT_PUBLIC_APP_URL` phải khớp domain thật của môi trường đang chạy, nhất là cho flow quên mật khẩu / reset password
+- `public.profiles` là nguồn sự thật cho phân quyền; tạo Auth user mà không có profile tương ứng thì user không vào được hệ thống
+
+Nếu cần nâng nhanh user có sẵn lên admin trong SQL Editor:
+
+```sql
+select public.promote_profile_to_admin('admin@sms.local');
+```
+
+Hướng dẫn production chi tiết nằm ở [docs/guides/HUONG_DAN_SU_DUNG_SETUP.md](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md).
+
+## 9. Những điểm kỹ thuật cần nhớ
+
+- `src/proxy.ts` dùng để refresh session/cookies trên các request động
+- `/auth/callback` là điểm vào để Supabase đổi `code` lấy session
+- route `/dashboard` không phải dashboard riêng, mà là điểm redirect về `/admin`, `/lecturer` hoặc `/student`
+- `npm run check` hiện pass với `0 errors`; còn `1` warning đã chấp nhận ở `useReactTable` do React Compiler không memo hóa an toàn API của TanStack Table
+
+## 10. Cấu trúc repo
 
 ```text
 sms-app/
 ├─ docs/
+├─ public/
 ├─ scripts/
-│  ├─ bootstrap-admin.ts
-│  ├─ demo-seed.ts
-│  ├─ demo-utils.ts
-│  ├─ reset-demo.ts
-│  └─ seed-demo.ts
 ├─ src/
 │  ├─ app/
 │  ├─ components/
@@ -58,360 +251,8 @@ sms-app/
 │  └─ types/
 ├─ supabase/
 │  ├─ migrations/
-│  │  ├─ 0001_init_sms.sql
-│  │  ├─ 0002_authz_hardening.sql
-│  │  └─ 0003_fix_schedule_room_overlap.sql
+│  ├─ migrations_archive/
 │  └─ seed.sql
 ├─ .env.example
 └─ package.json
 ```
-
-## 2. Yêu cầu hệ thống
-
-- Node.js 20+ khuyến nghị
-- npm
-- 1 project Supabase mới hoặc database test sạch
-- quyền truy cập Supabase SQL Editor
-- tùy chọn: Supabase CLI nếu bạn muốn push migration bằng CLI
-
-## 3. Biến môi trường
-
-Tạo `.env.local` từ `.env.example`.
-
-```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-DEMO_BATCH=sms-demo-2026
-```
-
-### 3.1 Ý nghĩa từng biến
-
-| Biến | Bắt buộc | Mục đích |
-| --- | --- | --- |
-| `NEXT_PUBLIC_APP_URL` | Có | URL gốc của ứng dụng, dùng trong auth callback và reset password |
-| `NEXT_PUBLIC_SUPABASE_URL` | Có | URL project Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Có | Public anon key cho app |
-| `SUPABASE_SERVICE_ROLE_KEY` | Có cho bootstrap admin và demo scripts | Dùng cho các tác vụ quản trị hệ thống ngoài giao diện |
-| `DEMO_BATCH` | Có khi dùng demo scripts | Marker để seed/reset đúng batch demo |
-
-### 3.2 Lưu ý trên Windows PowerShell
-
-Nếu PowerShell chặn `npm.ps1`, dùng `npm.cmd` thay cho `npm`.
-
-Ví dụ:
-
-```bash
-npm.cmd install
-npm.cmd run dev
-```
-
-## 4. Dựng hệ thống từ đầu
-
-### Bước 1: cài dependency
-
-```bash
-npm install
-```
-
-### Bước 2: tạo project Supabase
-
-Trong Supabase:
-
-1. Tạo project mới.
-2. Lấy:
-   - Project URL
-   - anon key
-   - service role key
-3. Điền các giá trị đó vào `.env.local`.
-
-### Bước 3: chạy migration database
-
-Chạy đúng thứ tự:
-
-1. `supabase/migrations/0001_init_sms.sql`
-2. `supabase/migrations/0002_authz_hardening.sql`
-3. `supabase/migrations/0003_fix_schedule_room_overlap.sql`
-
-Bạn có 2 cách:
-
-#### Cách A: dùng Supabase CLI
-
-```bash
-supabase link --project-ref <your-project-ref>
-supabase db push
-```
-
-#### Cách B: dùng SQL Editor
-
-Mở SQL Editor và chạy từng file migration theo đúng thứ tự trên.
-
-`0003_fix_schedule_room_overlap.sql` là migration sửa ràng buộc trùng phòng theo cả khung ngày hiệu lực, nên bắt buộc có khi setup hệ thống mới.
-
-### Bước 4: cấu hình Supabase Auth
-
-Trong `Authentication > URL Configuration`:
-
-- `Site URL`: `http://localhost:3000`
-- `Redirect URLs`:
-  - `http://localhost:3000/auth/callback`
-  - `http://localhost:3000/**`
-
-Nếu bạn deploy ở môi trường khác, `Site URL` và `Redirect URLs` phải đổi theo domain thực tế của môi trường đó.
-
-## 5. Tạo tài khoản admin riêng
-
-Đây là cách khởi tạo được khuyến nghị cho hệ thống thật. Bạn không cần dùng tài khoản mẫu hoặc seed demo nếu mục tiêu là tự vận hành hệ thống bằng tài khoản của mình.
-
-### 5.1 Cách khuyến nghị: bootstrap bằng script
-
-Repo hiện có script chính thức để tạo tài khoản admin đầu tiên:
-
-```bash
-npm run admin:bootstrap -- --email admin@your-domain.com --password "StrongPassword123!" --full-name "System Administrator"
-```
-
-Ví dụ trên Windows PowerShell:
-
-```bash
-npm.cmd run admin:bootstrap -- --email admin@your-domain.com --password "StrongPassword123!" --full-name "System Administrator"
-```
-
-Tùy chọn thêm:
-
-- `--phone 0900000000`
-- `--must-change-password true`
-
-Ví dụ đầy đủ:
-
-```bash
-npm run admin:bootstrap -- --email admin@company.com --password "StrongPassword123!" --full-name "Nguyen Van A" --phone 0900000000 --must-change-password true
-```
-
-Script sẽ:
-
-- tạo user trong `auth.users`
-- tạo profile tương ứng trong `public.profiles`
-- gán `role_code = 'ADMIN'`
-- gán `status = 'ACTIVE'`
-
-### 5.2 Khi nào nên dùng cách này
-
-Dùng `admin:bootstrap` khi:
-
-- bạn vừa tạo project Supabase mới
-- database chưa có admin thật
-- bạn muốn đăng nhập bằng tài khoản riêng thay vì tài khoản seed
-- bạn chuẩn bị vận hành staging hoặc production
-
-### 5.3 Cách thủ công nếu không dùng script
-
-1. Vào `Supabase > Authentication > Users`.
-2. Tạo một user email/password mới.
-3. Lấy `id` của user vừa tạo.
-4. Chạy SQL sau trong SQL Editor:
-
-```sql
-insert into public.profiles (
-  id,
-  email,
-  full_name,
-  role_code,
-  status,
-  must_change_password,
-  metadata
-)
-values (
-  '<AUTH_USER_ID>',
-  'admin@your-domain.com',
-  'System Administrator',
-  'ADMIN',
-  'ACTIVE',
-  true,
-  jsonb_build_object('source', 'manual-bootstrap')
-);
-```
-
-Không tạo bản ghi trong `public.profiles` thì user sẽ đăng nhập được về mặt Auth nhưng không vào được hệ thống vì middleware và session layer đọc quyền từ bảng `profiles`.
-
-### 5.4 Khuyến nghị sau khi tạo admin
-
-- đăng nhập bằng tài khoản admin vừa tạo
-- vào `/profile`
-- đổi mật khẩu ngay nếu bạn dùng mật khẩu bootstrap tạm thời
-- dùng tài khoản admin này để cấu hình các dữ liệu nền thay vì dựa vào tài khoản demo
-
-## 6. Chọn chiến lược dữ liệu ban đầu
-
-Sau khi đã có admin riêng, bạn cần quyết định database sẽ ở chế độ nào.
-
-### 6.1 Chế độ A: hệ thống sạch cho vận hành thật
-
-Khuyến nghị cho:
-
-- local development nghiêm túc
-- staging gần production
-- production
-
-Thực hiện:
-
-- chạy migration
-- bootstrap admin riêng
-- không chạy `supabase/seed.sql`
-- không chạy `npm run seed:demo`
-
-Sau đó đăng nhập bằng admin và nhập dữ liệu nền từ giao diện quản trị.
-
-### 6.2 Chế độ B: seed dữ liệu ICTU đầy đủ bằng SQL
-
-Phù hợp khi bạn cần dataset đầy đủ để demo nghiệp vụ theo kịch bản có sẵn.
-
-Chạy toàn bộ file:
-
-- `supabase/seed.sql`
-
-Đặc điểm:
-
-- script tự dọn batch `ictu-seed-2026` trước khi seed lại
-- tạo luôn dữ liệu auth, hồ sơ và dữ liệu nghiệp vụ
-- tất cả tài khoản trong bộ seed SQL dùng chung mật khẩu `Ictu@2026Seed`
-
-Tài khoản nhanh:
-
-- Admin: `daotao.admin@ictu.edu.vn`
-- Lecturer: `pham.hung@ictu.edu.vn`
-- Student: `dtc237340405001@st.ictu.edu.vn`
-
-### 6.3 Chế độ C: seed batch demo bằng script TypeScript
-
-Phù hợp khi bạn cần dataset demo nhẹ hơn và có thể reset bằng command local.
-
-```bash
-npm run seed:demo
-```
-
-Reset và seed lại:
-
-```bash
-npm run reset:demo
-npm run seed:demo
-```
-
-Đặc điểm:
-
-- yêu cầu `SUPABASE_SERVICE_ROLE_KEY`
-- dữ liệu được đánh dấu bằng `is_demo = true` và `demo_batch = DEMO_BATCH`
-- tất cả tài khoản demo dùng chung mật khẩu `Demo@123456`
-
-Tài khoản nhanh:
-
-- Admin: `admin.demo@sms.local`
-- Lecturer: `ha.nguyen@sms.local`
-- Student: `se22001@sms.local`
-
-### 6.4 Quy tắc bắt buộc
-
-Không nên trộn các chiến lược dữ liệu trên cùng một database nếu bạn không chủ động quản lý rõ mục đích của từng batch.
-
-Khuyến nghị:
-
-- production: chỉ bootstrap admin riêng, không seed dữ liệu mẫu
-- staging demo: chọn một trong hai cách seed
-- local: có thể chọn seed hoặc để database sạch tùy mục tiêu phát triển
-
-## 7. Chạy ứng dụng local
-
-```bash
-npm run dev
-```
-
-Truy cập:
-
-- `http://localhost:3000`
-
-## 8. Kiểm tra chất lượng
-
-Các lệnh chính thức:
-
-```bash
-npm run lint
-npm run typecheck
-npm run check
-```
-
-## 9. Scripts chính thức
-
-```bash
-npm run admin:bootstrap
-npm run seed:demo
-npm run reset:demo
-npm run dev
-npm run lint
-npm run typecheck
-npm run check
-```
-
-## 10. Vận hành dữ liệu demo
-
-### 10.1 File liên quan
-
-- `scripts/bootstrap-admin.ts`: bootstrap admin thật
-- `scripts/seed-demo.ts`: entry point seed demo
-- `scripts/demo-seed.ts`: dataset và logic seed demo
-- `scripts/reset-demo.ts`: reset demo batch
-- `scripts/demo-utils.ts`: helper cho service role và demo markers
-
-### 10.2 Nguyên tắc reset demo
-
-- chỉ xóa row có `is_demo = true`
-- chỉ xóa đúng `demo_batch` đang cấu hình
-- có kiểm tra tránh xóa nhầm dữ liệu live dùng cùng batch marker
-
-## 11. Lộ trình setup khuyến nghị theo từng môi trường
-
-### 11.1 Local phát triển có dữ liệu mẫu
-
-1. tạo project Supabase mới
-2. cấu hình `.env.local`
-3. chạy migration
-4. chọn `supabase/seed.sql` hoặc `npm run seed:demo`
-5. chạy app
-
-### 11.2 Local hoặc staging gần production
-
-1. tạo project Supabase mới
-2. cấu hình `.env.local`
-3. chạy migration
-4. chạy `npm run admin:bootstrap`
-5. không seed dữ liệu mẫu
-6. đăng nhập bằng admin riêng và nhập dữ liệu nền thật
-
-### 11.3 Production
-
-1. tạo project Supabase production riêng
-2. chạy migration production
-3. bootstrap admin riêng
-4. cấu hình env trên Vercel
-5. cập nhật Supabase Auth redirect URLs theo domain production
-6. không chạy seed demo nếu không thực sự cần dữ liệu mẫu
-
-## 12. Deploy
-
-Hướng dẫn deploy riêng nằm tại:
-
-- [docs/VERCEL_SETUP_GUIDE.md](./docs/VERCEL_SETUP_GUIDE.md)
-
-## 13. Những điểm cần nhớ
-
-- Quyền truy cập của hệ thống đọc từ `public.profiles`, không chỉ từ Supabase Auth.
-- Tài khoản admin đầu tiên nên được tạo bằng `npm run admin:bootstrap`.
-- `0003_fix_schedule_room_overlap.sql` là một phần của setup chuẩn hiện tại.
-- Không dùng tài khoản demo cho production.
-- Không trộn `supabase/seed.sql` và `seed:demo` nếu không thực sự chủ ý quản lý hai dataset khác nhau.
-
-## 14. Tài liệu người dùng
-
-Bộ tài liệu hướng dẫn sử dụng cho từng nhóm người dùng nằm tại:
-
-- [docs/user-guides/README.md](./docs/user-guides/README.md)

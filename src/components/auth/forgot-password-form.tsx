@@ -67,7 +67,11 @@ export function ForgotPasswordForm() {
           </FieldContent>
         </Field>
       </FieldGroup>
-      <FormAlert message={state.message} success={state.success} />
+      <FormAlert
+        message={state.message}
+        status={state.status}
+        success={state.success}
+      />
       <SubmitButton className="w-full" pending={isPending}>
         Gửi email đặt lại mật khẩu
       </SubmitButton>

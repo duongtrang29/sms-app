@@ -69,25 +69,21 @@ export async function listOfferingGradebook(offeringId: string) {
 
   const { data: offering, error: offeringError } = await supabase
     .from("course_offerings")
-    .select("id, course_id, section_code")
+    .select(
+      `
+        id,
+        section_code,
+        course:courses!inner(
+          code,
+          name
+        )
+      `,
+    )
     .eq("id", offeringId)
     .maybeSingle();
 
   if (offeringError) {
     throw new Error(offeringError.message);
-  }
-
-  const courseId = (offering as { course_id: string } | null)?.course_id ?? null;
-  const { data: course, error: courseError } = courseId
-    ? await supabase
-        .from("courses")
-        .select("code, name")
-        .eq("id", courseId)
-        .maybeSingle()
-    : { data: null, error: null };
-
-  if (courseError) {
-    throw new Error(courseError.message);
   }
 
   const studentIds = ((enrollments as Enrollment[]) ?? []).map(
@@ -97,26 +93,72 @@ export async function listOfferingGradebook(offeringId: string) {
     (enrollment) => enrollment.id,
   );
 
-  const [{ data: students }, { data: grades }, { data: profiles }] = await Promise.all([
-    supabase.from("students").select("*").in("id", studentIds as never),
-    supabase.from("grades").select("*").in("enrollment_id", enrollmentIds as never),
-    supabase.from("profiles").select("id, full_name").in("id", studentIds as never),
-  ]);
+  const [{ data: studentsData, error: studentsError }, { data: gradesData, error: gradesError }] =
+    await Promise.all([
+      studentIds.length
+        ? supabase
+            .from("students")
+            .select(
+              `
+                id,
+                student_code,
+                profile:profiles!inner(
+                  id,
+                  full_name
+                )
+              `,
+            )
+            .in("id", studentIds as never)
+        : Promise.resolve({ data: [], error: null }),
+      enrollmentIds.length
+        ? supabase.from("grades").select("*").in("enrollment_id", enrollmentIds as never)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+  const lookupErrors = [studentsError, gradesError].filter(Boolean);
+  if (lookupErrors.length > 0) {
+    throw new Error(lookupErrors[0]?.message ?? "Unable to load gradebook data.");
+  }
+
+  const studentRows = ((studentsData ?? []) as Array<{
+    id: string;
+    profile: { full_name: string; id: string } | Array<{ full_name: string; id: string }>;
+    student_code: string;
+  }>).map((row) => {
+    const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+    return {
+      id: row.id,
+      profile,
+      student_code: row.student_code,
+    };
+  });
+
+  const rawCourse = (offering as {
+    course:
+      | { code: string; name: string }
+      | Array<{ code: string; name: string }>
+      | null;
+  } | null)?.course;
+  const normalizedCourse = Array.isArray(rawCourse)
+    ? (rawCourse[0] ?? null)
+    : (rawCourse ?? null);
 
   return {
-    course: (course as { code: string; name: string } | null) ?? null,
+    course: normalizedCourse,
     enrollments: (enrollments as Enrollment[]) ?? [],
-    grades: (grades as Grade[]) ?? [],
+    grades: (gradesData as Grade[]) ?? [],
     offering:
       (offering as { id: string; section_code: string } | null) ?? null,
-    profiles:
-      ((profiles as Array<{ full_name: string; id: string }>) ?? []).reduce<
-        Record<string, string>
-      >((accumulator, item) => {
-        accumulator[item.id] = item.full_name;
-        return accumulator;
-      }, {}),
-    students: (students as Array<{ id: string; student_code: string }>) ?? [],
+    profiles: studentRows.reduce<Record<string, string>>((accumulator, row) => {
+      if (row.profile) {
+        accumulator[row.profile.id] = row.profile.full_name;
+      }
+      return accumulator;
+    }, {}),
+    students: studentRows.map((row) => ({
+      id: row.id,
+      student_code: row.student_code,
+    })),
   } satisfies GradebookSnapshot;
 }
 

@@ -79,7 +79,11 @@ export function LoginForm({ initialMessage }: LoginFormProps) {
           </FieldContent>
         </Field>
       </FieldGroup>
-      <FormAlert message={state.message ?? initialMessage} success={state.success} />
+      <FormAlert
+        message={state.message ?? initialMessage}
+        status={state.status}
+        success={state.success}
+      />
       <SubmitButton className="w-full" pending={isPending}>
         Đăng nhập
       </SubmitButton>

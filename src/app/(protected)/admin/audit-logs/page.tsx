@@ -4,8 +4,8 @@ import {
   SearchCheckIcon,
   ShieldCheckIcon,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import { AuditLogsTable } from "@/components/dashboard/audit-logs-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
@@ -16,6 +16,20 @@ import {
   getAuditActionLabel,
   getAuditRoleLabel,
 } from "@/lib/audit-presentation";
+
+const AuditLogsTable = dynamic(
+  () =>
+    import("@/components/dashboard/audit-logs-table").then(
+      (module) => module.AuditLogsTable,
+    ),
+  {
+    loading: () => (
+      <div className="app-subtle-surface p-4 text-caption text-muted-foreground">
+        Đang tải bảng nhật ký...
+      </div>
+    ),
+  },
+);
 
 type AuditLogsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -93,6 +107,7 @@ export default async function AuditLogsPage({
       <SectionPanel>
         <FilterToolbar
           key={`${query}|${action}|${role}|${demo}`}
+          resultCount={snapshot.items.length}
           searchPlaceholder="Tìm thao tác, đối tượng, siêu dữ liệu"
           searchValue={query}
           selects={[

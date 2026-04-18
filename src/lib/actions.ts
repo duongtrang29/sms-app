@@ -3,6 +3,7 @@ import { ZodError, type ZodType } from "zod";
 import type { ActionState } from "@/types/app";
 
 export const initialActionState: ActionState = {
+  status: "failed",
   success: false,
 };
 
@@ -26,6 +27,19 @@ export function failure<T = void>(
   return {
     errors,
     message,
+    status: "failed",
+    success: false,
+  };
+}
+
+export function partial<T = void>(
+  message: string,
+  data?: T,
+): ActionState<T> {
+  return {
+    data,
+    message,
+    status: "partial",
     success: false,
   };
 }
@@ -34,6 +48,7 @@ export function success<T = void>(message: string, data?: T): ActionState<T> {
   return {
     data,
     message,
+    status: "success",
     success: true,
   };
 }

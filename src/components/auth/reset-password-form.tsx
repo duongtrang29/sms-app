@@ -36,10 +36,15 @@ export function ResetPasswordForm() {
 
   useEffect(() => {
     if (state.message) {
-      const notifier = state.success ? toast.success : toast.error;
+      const notifier =
+        state.status === "partial"
+          ? toast.warning
+          : state.success
+            ? toast.success
+            : toast.error;
       notifier(state.message);
     }
-  }, [state.message, state.success]);
+  }, [state.message, state.status, state.success]);
 
   return (
     <form
@@ -80,7 +85,11 @@ export function ResetPasswordForm() {
           </FieldContent>
         </Field>
       </FieldGroup>
-      <FormAlert message={state.message} success={state.success} />
+      <FormAlert
+        message={state.message}
+        status={state.status}
+        success={state.success}
+      />
       <SubmitButton className="w-full" pending={isPending}>
         Cập nhật mật khẩu
       </SubmitButton>

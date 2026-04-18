@@ -1,18 +1,19 @@
 import Link from "next/link";
+import {
+  CheckIcon,
+  ClipboardCheckIcon,
+  FileTextIcon,
+  LockIcon,
+  LockOpenIcon,
+} from "lucide-react";
 
 import { FormAlert } from "@/components/forms/form-alert";
 import { AdminGradesTable } from "@/components/dashboard/admin-grades-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { transitionOfferingGradesFormAction } from "@/features/admin-grades/actions";
 import {
   listAdminGradeReviewSnapshot,
@@ -84,56 +85,60 @@ export default async function AdminGradesPage({
             ))}
           </div>
         }
-        description="Quản trị viên duyệt, khóa và mở khóa điểm theo quy trình Nháp → Chờ duyệt → Đã duyệt → Đã khóa mà cơ sở dữ liệu đã kiểm soát."
-        title="Duyệt và khóa điểm"
+        description="Kiểm soát workflow điểm toàn hệ thống."
+        icon={<ClipboardCheckIcon className="size-5" />}
+        info="Quản trị viên duyệt, khóa và mở khóa điểm theo quy trình Nháp → Chờ duyệt → Đã duyệt → Đã khóa mà cơ sở dữ liệu đã kiểm soát."
+        title="Duyệt điểm"
       />
       {error ? <FormAlert message={error} /> : null}
       {success ? <FormAlert message={success} success /> : null}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           description="Tổng bản ghi điểm hiện có"
+          icon={<FileTextIcon className="size-4" />}
           label="Tất cả điểm"
           tone="primary"
           value={snapshot.summary.ALL}
         />
         <StatCard
           description="Điểm giảng viên đang nhập hoặc còn nháp"
+          icon={<FileTextIcon className="size-4" />}
           label="Nháp"
           tone="warning"
           value={snapshot.summary.DRAFT}
         />
         <StatCard
           description="Điểm đã được giảng viên gửi duyệt"
+          icon={<ClipboardCheckIcon className="size-4" />}
           label="Chờ duyệt"
           tone="warning"
           value={snapshot.summary.SUBMITTED}
         />
         <StatCard
           description="Điểm đã được quản trị viên duyệt"
+          icon={<CheckIcon className="size-4" />}
           label="Đã duyệt"
           tone="success"
           value={snapshot.summary.APPROVED}
         />
         <StatCard
           description="Điểm đã khóa, chỉ quản trị viên mới được mở lại"
+          icon={<LockIcon className="size-4" />}
           label="Đã khóa"
           tone="neutral"
           value={snapshot.summary.LOCKED}
         />
       </div>
-      <Card className="shadow-none">
-        <CardHeader>
-          <CardTitle>Xử lý theo học phần</CardTitle>
-          <CardDescription>
-            Dùng cho thao tác duyệt hoặc khóa hàng loạt khi một lớp học phần đã hoàn tất nhập điểm.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <SectionPanel
+        description="Duyệt, khóa hoặc mở lại điểm theo từng học phần."
+        title="Xử lý theo học phần"
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {snapshot.offeringSummaries.length ? (
             snapshot.offeringSummaries.slice(0, 9).map((offering) => (
               <div
                 key={offering.offering_id}
-                className="rounded-[22px] border border-border/70 bg-background/70 p-5"
+                className="app-subtle-surface p-5"
               >
                 <div className="space-y-3">
                   <div>
@@ -159,6 +164,7 @@ export default async function AdminGradesPage({
                         size="sm"
                         type="submit"
                       >
+                        <CheckIcon data-icon="inline-start" />
                         Duyệt theo học phần
                       </Button>
                     </form>
@@ -173,6 +179,7 @@ export default async function AdminGradesPage({
                         type="submit"
                         variant="outline"
                       >
+                        <LockIcon data-icon="inline-start" />
                         Khóa theo học phần
                       </Button>
                     </form>
@@ -187,6 +194,7 @@ export default async function AdminGradesPage({
                         type="submit"
                         variant="secondary"
                       >
+                        <LockOpenIcon data-icon="inline-start" />
                         Mở khóa theo học phần
                       </Button>
                     </form>
@@ -202,8 +210,8 @@ export default async function AdminGradesPage({
               />
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionPanel>
       <AdminGradesTable data={snapshot.rows} returnTo={returnTo} />
     </div>
   );

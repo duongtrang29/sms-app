@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { publicEnv } from "@/lib/env";
+import { supabaseResilientFetch } from "@/lib/network/resilient-fetch";
 import type { Database } from "@/types/database";
 
 export async function createClient() {
@@ -24,6 +25,9 @@ export async function createClient() {
             // Cookie mutation can fail inside some Server Component boundaries.
           }
         },
+      },
+      global: {
+        fetch: supabaseResilientFetch,
       },
     },
   );

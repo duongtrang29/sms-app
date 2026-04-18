@@ -62,10 +62,13 @@ export type NavItem = {
   section: NavSection;
 };
 
+export type ActionOutcomeStatus = "failed" | "partial" | "success";
+
 export type ActionState<T = void> = {
   data?: T | undefined;
   errors?: Record<string, string[]> | undefined;
   message?: string | undefined;
+  status: ActionOutcomeStatus;
   success: boolean;
 };
 

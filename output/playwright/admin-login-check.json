@@ -1,0 +1,8 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "email": "admin.reset@sms.local",
+  "finalUrl": "http://localhost:3000/admin",
+  "isAdminArea": true,
+  "screenshotPath": "D:\\Project\\Hệ thống quản lý sinh viên\\sms-app\\output\\playwright\\admin-login-check.png",
+  "checkedAt": "2026-04-16T18:54:59.017Z"
+}

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BookOpenIcon, PlusIcon, Rows3Icon, ShieldCheckIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 
-import { CoursesTable } from "@/components/dashboard/courses-table";
 import { CourseForm } from "@/components/forms/course-form";
 import { FormAlert } from "@/components/forms/form-alert";
 import { FormCardSkeleton } from "@/components/forms/form-container";
@@ -13,7 +13,7 @@ import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { listDepartments } from "@/features/departments/queries";
-import { getCourseById, listCourses } from "@/features/courses/queries";
+import { getCourseById, listCoursesSnapshot } from "@/features/courses/queries";
 import {
   buildCreatePath,
   buildReturnPath,
@@ -21,9 +21,25 @@ import {
 } from "@/lib/admin-routing";
 import { mapOptions } from "@/lib/options";
 
+const CoursesTable = dynamic(
+  () =>
+    import("@/components/dashboard/courses-table").then(
+      (module) => module.CoursesTable,
+    ),
+  {
+    loading: () => (
+      <div className="app-subtle-surface p-4 text-caption text-muted-foreground">
+        Đang tải bảng môn học...
+      </div>
+    ),
+  },
+);
+
 type CoursesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const COURSE_STATUS_FILTERS = ["ACTIVE", "INACTIVE"] as const;
 
 async function CourseEditorCard({
   departments,
@@ -51,7 +67,6 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
   const editId = getSearchParamString(resolvedSearchParams, "edit") || null;
   const error = getSearchParamString(resolvedSearchParams, "error");
   const queryValue = getSearchParamString(resolvedSearchParams, "q");
-  const query = queryValue.toLowerCase();
   const departmentFilter = getSearchParamString(resolvedSearchParams, "department");
   const success = getSearchParamString(resolvedSearchParams, "success");
   const statusFilter = getSearchParamString(resolvedSearchParams, "status");
@@ -63,16 +78,27 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
   ]);
   const isCreateOpen = mode === "create";
   const isEditorOpen = isCreateOpen || Boolean(editId);
+  const normalizedStatusFilter = COURSE_STATUS_FILTERS.includes(
+    statusFilter as (typeof COURSE_STATUS_FILTERS)[number],
+  )
+    ? (statusFilter as (typeof COURSE_STATUS_FILTERS)[number])
+    : undefined;
+  const courseFilters = {
+    limit: 500,
+    ...(departmentFilter ? { departmentId: departmentFilter } : {}),
+    ...(queryValue ? { query: queryValue } : {}),
+    ...(normalizedStatusFilter ? { status: normalizedStatusFilter } : {}),
+  };
 
-  const [departments, courses] = await Promise.all([
+  const [departments, coursesSnapshot] = await Promise.all([
     listDepartments(),
-    listCourses(),
+    listCoursesSnapshot(courseFilters),
   ]);
 
   const departmentMap = new Map(
     departments.map((department) => [department.id, department.name]),
   );
-  const allRows = courses.map((course) => ({
+  const rows = coursesSnapshot.items.map((course) => ({
     code: course.code,
     credit_hours: course.credit_hours,
     departmentId: course.department_id,
@@ -81,31 +107,6 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
     is_active: course.is_active,
     name: course.name,
   }));
-
-  const rows = allRows.filter((course) => {
-    if (
-      query &&
-      ![course.code, course.name, course.departmentName]
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    ) {
-      return false;
-    }
-
-    if (departmentFilter && course.departmentId !== departmentFilter) {
-      return false;
-    }
-
-    if (statusFilter) {
-      const statusValue = course.is_active ? "ACTIVE" : "INACTIVE";
-      if (statusValue !== statusFilter) {
-        return false;
-      }
-    }
-
-    return true;
-  });
 
   const departmentOptions = mapOptions(
     departments,
@@ -134,14 +135,14 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
           icon={<BookOpenIcon className="size-4" />}
           label="Tổng môn học"
           tone="primary"
-          value={allRows.length}
+          value={coursesSnapshot.summary.totalCourses}
         />
         <StatCard
           description="Môn học đang còn hiệu lực để mở học phần."
           icon={<ShieldCheckIcon className="size-4" />}
           label="Đang hiệu lực"
           tone="success"
-          value={allRows.filter((row) => row.is_active).length}
+          value={coursesSnapshot.summary.activeCourses}
         />
         <StatCard
           description="Số tín chỉ trung bình trên danh mục đang hiển thị."
@@ -167,6 +168,7 @@ export default async function CoursesPage({ searchParams }: CoursesPageProps) {
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${departmentFilter}|${statusFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm mã môn, tên môn, khoa"
           searchValue={queryValue}
           selects={[

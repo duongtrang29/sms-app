@@ -130,6 +130,7 @@ export default async function AcademicClassesPage({
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${majorFilter}|${statusFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm mã lớp, tên lớp, ngành"
           searchValue={queryValue}
           selects={[

@@ -1,21 +1,14 @@
-import type { Metadata } from "next";
-import { IBM_Plex_Mono, Manrope } from "next/font/google";
+﻿import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppProviders } from "@/components/layout/AppProviders";
 import { siteConfig } from "@/lib/constants/site";
 
 import "./globals.css";
 
-const sans = Manrope({
+const inter = Inter({
+  subsets: ["latin"],
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  variable: "--font-geist-mono",
-  weight: ["400", "500"],
 });
 
 export default function RootLayout({
@@ -24,19 +17,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="vi"
-      className={`${sans.variable} ${mono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col bg-background text-foreground">
-        <TooltipProvider>
-          {children}
-          <Toaster richColors />
-        </TooltipProvider>
+    <html lang="vi" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-screen flex flex-col bg-background text-foreground">
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
 }
+
 export const metadata: Metadata = {
   title: {
     default: siteConfig.name,

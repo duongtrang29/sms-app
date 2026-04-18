@@ -31,7 +31,7 @@ export function TableActionLink({
           <Link
             className={cn(
               buttonVariants({ size: "icon-sm", variant }),
-              "size-9 shrink-0 border border-border/70 bg-background/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]",
+              "size-11 shrink-0 md:size-9",
             )}
             href={href}
           >

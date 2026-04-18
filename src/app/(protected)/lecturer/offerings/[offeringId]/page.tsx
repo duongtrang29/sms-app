@@ -26,6 +26,10 @@ export default async function GradebookPage({
 }: GradebookPageProps) {
   const { offeringId } = await params;
   const resolvedSearchParams = await searchParams;
+  const returnToQuery =
+    typeof resolvedSearchParams.return_to === "string"
+      ? resolvedSearchParams.return_to
+      : undefined;
   const error =
     typeof resolvedSearchParams.error === "string"
       ? resolvedSearchParams.error
@@ -37,6 +41,12 @@ export default async function GradebookPage({
 
   const gradebook = await listOfferingGradebook(offeringId);
   const offering = gradebook.offering;
+  const returnToPath =
+    returnToQuery &&
+    (returnToQuery.startsWith("/lecturer/offerings/") ||
+      returnToQuery.startsWith("/lecturer/grades/"))
+      ? returnToQuery
+      : `/lecturer/offerings/${offeringId}`;
 
   if (!offering) {
     notFound();
@@ -64,6 +74,7 @@ export default async function GradebookPage({
         actions={
           <form action={submitOfferingGradesFormAction}>
             <input name="offering_id" type="hidden" value={offeringId} />
+            <input name="return_to" type="hidden" value={returnToPath} />
             <Button type="submit" variant="outline">
               Gửi duyệt toàn bộ
             </Button>
@@ -129,6 +140,7 @@ export default async function GradebookPage({
                 >
                   <input name="enrollment_id" type="hidden" value={enrollment.id} />
                   <input name="offering_id" type="hidden" value={offeringId} />
+                  <input name="return_to" type="hidden" value={returnToPath} />
                   <div className="flex flex-col gap-2">
                     <div className="font-semibold tracking-tight">
                       {studentCode} - {studentName}

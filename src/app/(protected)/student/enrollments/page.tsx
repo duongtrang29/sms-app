@@ -5,10 +5,10 @@ import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listCourses } from "@/features/courses/queries";
+import { listCoursesByIds } from "@/features/courses/queries";
 import {
-  listCourseOfferings,
-  listPrimaryTeachingAssignments,
+  listCourseOfferingsByIds,
+  listPrimaryTeachingAssignmentsForOfferings,
 } from "@/features/course-offerings/queries";
 import {
   cancelEnrollmentFormAction,
@@ -19,8 +19,8 @@ import {
   listSchedulesForOfferings,
   listStudentEnrollments,
 } from "@/features/enrollments/queries";
-import { listLecturers } from "@/features/lecturers/queries";
-import { listSemesters } from "@/features/semesters/queries";
+import { listLecturersByIds } from "@/features/lecturers/queries";
+import { listSemestersByIds } from "@/features/semesters/queries";
 import { formatDateTime, weekdayLabel } from "@/lib/format";
 
 type StudentEnrollmentsPageProps = {
@@ -31,6 +31,10 @@ export default async function StudentEnrollmentsPage({
   searchParams,
 }: StudentEnrollmentsPageProps) {
   const resolvedSearchParams = await searchParams;
+  const returnToQuery =
+    typeof resolvedSearchParams.return_to === "string"
+      ? resolvedSearchParams.return_to
+      : undefined;
   const error =
     typeof resolvedSearchParams.error === "string"
       ? resolvedSearchParams.error
@@ -39,23 +43,16 @@ export default async function StudentEnrollmentsPage({
     typeof resolvedSearchParams.success === "string"
       ? resolvedSearchParams.success
       : undefined;
+  const returnToPath =
+    returnToQuery &&
+    (returnToQuery.startsWith("/student/enrollments") ||
+      returnToQuery.startsWith("/student/enrollment"))
+      ? returnToQuery
+      : "/student/enrollments";
 
-  const [
-    allOfferings,
-    courses,
-    enrollments,
-    lecturers,
-    openOfferings,
-    primaryAssignments,
-    semesters,
-  ] = await Promise.all([
-    listCourseOfferings(),
-    listCourses(),
+  const [enrollments, openOfferings] = await Promise.all([
     listStudentEnrollments(),
-    listLecturers(),
     listOpenOfferingsForStudent(),
-    listPrimaryTeachingAssignments(),
-    listSemesters(),
   ]);
 
   const allOfferingIds = [
@@ -64,7 +61,26 @@ export default async function StudentEnrollmentsPage({
       ...enrollments.map((enrollment) => enrollment.course_offering_id),
     ]),
   ];
-  const schedules = await listSchedulesForOfferings(allOfferingIds);
+
+  const [allOfferings, primaryAssignments, schedules] = await Promise.all([
+    listCourseOfferingsByIds(allOfferingIds),
+    listPrimaryTeachingAssignmentsForOfferings(allOfferingIds),
+    listSchedulesForOfferings(allOfferingIds),
+  ]);
+
+  const courseIds = [...new Set(allOfferings.map((offering) => offering.course_id))];
+  const semesterIds = [
+    ...new Set(allOfferings.map((offering) => offering.semester_id)),
+  ];
+  const lecturerIds = [
+    ...new Set(primaryAssignments.map((assignment) => assignment.lecturer_id)),
+  ];
+
+  const [courses, lecturers, semesters] = await Promise.all([
+    listCoursesByIds(courseIds),
+    listLecturersByIds(lecturerIds),
+    listSemestersByIds(semesterIds),
+  ]);
 
   const courseMap = new Map(courses.map((course) => [course.id, course]));
   const lecturerMap = new Map(lecturers.map((lecturer) => [lecturer.id, lecturer]));
@@ -192,6 +208,11 @@ export default async function StudentEnrollmentsPage({
                             type="hidden"
                             value={offering.id}
                           />
+                          <input
+                            name="return_to"
+                            type="hidden"
+                            value={returnToPath}
+                          />
                           <Button type="submit">Đăng ký</Button>
                         </form>
                       )}
@@ -246,6 +267,11 @@ export default async function StudentEnrollmentsPage({
                             name="enrollment_id"
                             type="hidden"
                             value={enrollment.id}
+                          />
+                          <input
+                            name="return_to"
+                            type="hidden"
+                            value={returnToPath}
                           />
                           <Button type="submit" variant="outline">
                             Hủy đăng ký

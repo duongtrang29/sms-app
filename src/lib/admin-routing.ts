@@ -15,18 +15,23 @@ export function buildPathWithUpdates(
   path: string,
   updates: Array<[string, string | null | undefined]>,
 ) {
-  const url = new URL(`http://local${path}`);
+  const [rawPath = "/", rawQuery = ""] = path.split("?", 2);
+  const normalizedPath = rawPath.trim() || "/";
+  const pathname = normalizedPath.startsWith("/")
+    ? normalizedPath
+    : `/${normalizedPath}`;
+  const searchParams = new URLSearchParams(rawQuery);
 
   updates.forEach(([key, value]) => {
     if (value && value.trim()) {
-      url.searchParams.set(key, value);
+      searchParams.set(key, value);
     } else {
-      url.searchParams.delete(key);
+      searchParams.delete(key);
     }
   });
 
-  const query = url.searchParams.toString();
-  return query ? `${url.pathname}?${query}` : url.pathname;
+  const query = searchParams.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 export function buildReturnPath(

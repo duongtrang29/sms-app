@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 
-import { failure, parseWithSchema, success } from "@/lib/actions";
+import { failure, parseWithSchema, partial, success } from "@/lib/actions";
+import { tryCreateAuditLog } from "@/lib/audit";
 import { matchServerFieldErrors } from "@/lib/form-errors";
 import { isAppRole } from "@/lib/auth/roles";
 import { publicEnv } from "@/lib/env";
@@ -13,37 +14,6 @@ import {
   resetPasswordSchema,
 } from "@/features/auth/schemas";
 import type { ActionState } from "@/types/app";
-import type { Json } from "@/types/database";
-
-async function tryAuditLog(
-  action: string,
-  entityType: string,
-  entityId?: string,
-  metadata?: Record<string, unknown>,
-) {
-  const supabase = await createClient();
-  const args = {
-    p_action: action,
-    p_entity_type: entityType,
-    p_entity_id: entityId ?? null,
-    p_target_user_id: null,
-    p_metadata: (metadata ?? {}) as Json,
-  };
-
-  try {
-    const rpc = supabase.rpc.bind(supabase) as unknown as (
-      fn: "log_audit_event",
-      payload: typeof args,
-    ) => Promise<{ error: { message: string } | null }>;
-    const { error } = await rpc("log_audit_event", args);
-
-    if (error) {
-      console.error("Failed to write auth audit log:", error.message, args);
-    }
-  } catch (error) {
-    console.error("Unexpected auth audit log failure:", error, args);
-  }
-}
 
 export async function loginAction(
   _previousState: ActionState,
@@ -109,7 +79,17 @@ export async function loginAction(
     return failure("Tài khoản không có quyền truy cập hoặc đang bị khóa.");
   }
 
-  await tryAuditLog("AUTH_LOGIN", "auth");
+  const auditResult = await tryCreateAuditLog({
+    action: "AUTH_LOGIN",
+    entityType: "auth",
+  });
+
+  if (auditResult.status !== "success") {
+    console.error(
+      `[AUTH_LOGIN_AUDIT_FAILED] ${auditResult.reason}: ${auditResult.message}`,
+    );
+  }
+
   redirect("/dashboard");
 }
 
@@ -170,7 +150,17 @@ export async function resetPasswordAction(
     return failure("Không thể cập nhật mật khẩu.", fieldErrors);
   }
 
-  await tryAuditLog("PASSWORD_RESET", "auth");
+  const auditResult = await tryCreateAuditLog({
+    action: "PASSWORD_RESET",
+    entityType: "auth",
+  });
+
+  if (auditResult.status !== "success") {
+    return partial(
+      "Mật khẩu đã cập nhật nhưng hệ thống không ghi được nhật ký bảo mật. Vui lòng liên hệ quản trị viên.",
+    );
+  }
+
   return success("Mật khẩu đã được cập nhật.");
 }
 

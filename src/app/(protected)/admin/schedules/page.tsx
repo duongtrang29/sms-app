@@ -132,6 +132,7 @@ export default async function SchedulesPage({ searchParams }: SchedulesPageProps
       <SectionPanel>
         <FilterToolbar
           key={queryValue}
+          resultCount={rows.length}
           searchPlaceholder="Tìm học phần, phòng học, thời gian"
           searchValue={queryValue}
         />

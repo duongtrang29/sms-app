@@ -1,3 +1,4 @@
+import { FormAlert } from "@/components/forms/form-alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,23 @@ import { listStudentGrades } from "@/features/grades/queries";
 import { createRegradeRequestFormAction } from "@/features/regrades/actions";
 import { listStudentRegradeRequests } from "@/features/regrades/queries";
 
-export default async function StudentRegradeRequestsPage() {
+type StudentRegradeRequestsPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function StudentRegradeRequestsPage({
+  searchParams,
+}: StudentRegradeRequestsPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const error =
+    typeof resolvedSearchParams.error === "string"
+      ? resolvedSearchParams.error
+      : undefined;
+  const success =
+    typeof resolvedSearchParams.success === "string"
+      ? resolvedSearchParams.success
+      : undefined;
+
   const [enrollments, grades, requests] = await Promise.all([
     listStudentEnrollments(),
     listStudentGrades(),
@@ -24,6 +41,8 @@ export default async function StudentRegradeRequestsPage() {
         description="Gửi yêu cầu phúc khảo cho các điểm đã được duyệt hoặc khóa, sau đó theo dõi trạng thái xử lý."
         title="Yêu cầu phúc khảo"
       />
+      {error ? <FormAlert message={error} /> : null}
+      {success ? <FormAlert message={success} success /> : null}
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="shadow-none">
           <CardHeader>
@@ -38,6 +57,7 @@ export default async function StudentRegradeRequestsPage() {
               >
                 <input name="grade_id" type="hidden" value={grade.id} />
                 <input name="enrollment_id" type="hidden" value={grade.enrollment_id} />
+                <input name="return_to" type="hidden" value="/student/regrade-requests" />
                 <div className="text-sm font-medium">
                   Mã đăng ký {enrollmentMap.get(grade.enrollment_id)?.id} | Điểm tổng {grade.total_score ?? "Chưa có"}
                 </div>

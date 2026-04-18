@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { publicEnv, serverEnv } from "@/lib/env";
+import { supabaseResilientFetch } from "@/lib/network/resilient-fetch";
 import type { Database } from "@/types/database";
 
 export function createAdminClient() {
@@ -11,6 +12,9 @@ export function createAdminClient() {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      global: {
+        fetch: supabaseResilientFetch,
       },
     },
   );

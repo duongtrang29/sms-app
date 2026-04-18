@@ -129,6 +129,7 @@ export default async function MajorsPage({ searchParams }: MajorsPageProps) {
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${departmentFilter}|${statusFilter}`}
+          resultCount={rows.length}
           searchPlaceholder="Tìm mã ngành, tên ngành, khoa"
           searchValue={queryValue}
           selects={[

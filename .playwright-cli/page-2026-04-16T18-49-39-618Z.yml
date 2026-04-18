@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: SMS
+        - generic [ref=e9]:
+          - heading "Không gian học vụ gọn, rõ và sẵn sàng cho vận hành thật." [level=2] [ref=e10]
+          - generic [ref=e11]:
+            - paragraph [ref=e12]: Theo dõi học phần
+            - button "Xem thêm thông tin" [ref=e13]:
+              - img [ref=e14]
+      - generic [ref=e16]:
+        - generic [ref=e18]:
+          - paragraph [ref=e19]: Phân quyền phía máy chủ
+          - button "Xem thêm thông tin" [ref=e20]:
+            - img [ref=e21]
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: Giao diện tối giản hơn để tập trung vào bảng dữ liệu
+          - button "Xem thêm thông tin" [ref=e26]:
+            - img [ref=e27]
+    - generic [ref=e30]:
+      - generic [ref=e31]:
+        - generic [ref=e32]: SMS
+        - heading "Đăng nhập hệ thống" [level=1] [ref=e33]
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: Đăng nhập bằng tài khoản do quản trị viên cấp để truy cập hệ thống quản…
+          - button "Xem thêm thông tin" [ref=e36]:
+            - img [ref=e37]
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - group [ref=e41]:
+            - generic [ref=e42]: Email
+            - textbox "Email" [ref=e44]:
+              - /placeholder: taikhoan@truong.edu.vn
+          - group [ref=e45]:
+            - generic [ref=e46]: Mật khẩu
+            - textbox "Mật khẩu" [ref=e48]
+        - button "Đăng nhập" [ref=e49]
+      - generic [ref=e50]:
+        - text: Quên mật khẩu?
+        - link "Đặt lại tại đây" [ref=e51] [cursor=pointer]:
+          - /url: /forgot-password
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e57] [cursor=pointer]:
+    - img [ref=e58]
