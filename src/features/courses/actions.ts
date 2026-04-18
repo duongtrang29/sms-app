@@ -7,8 +7,9 @@ import { failure, parseWithSchema } from "@/lib/actions";
 import { buildPathWithUpdates } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { courseSchema } from "@/features/courses/schemas";
 import type { ActionState } from "@/types/app";
 
@@ -44,7 +45,7 @@ export async function upsertCourseAction(
     return failure("Thông tin môn học chưa hợp lệ.", parsed.errors);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const prerequisiteCodes = (parsed.data.prerequisite_codes ?? "")
     .split(",")
     .map((value) => value.trim().toUpperCase())
@@ -89,9 +90,12 @@ export async function upsertCourseAction(
     return failure(
       fieldErrors?.code?.[0] ??
         fieldErrors?.prerequisite_codes?.[0] ??
-        (parsed.data.id
+        parseSupabaseError(
+          rpcError,
+          parsed.data.id
           ? "Không thể cập nhật môn học."
-          : "Không thể tạo môn học."),
+          : "Không thể tạo môn học.",
+        ),
       fieldErrors,
     );
   }
@@ -125,7 +129,7 @@ export async function deleteCourseFormAction(formData: FormData) {
     redirectToCourses(returnPath, "error", "Thiếu môn học cần xóa.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [
     { count: offeringCount, error: offeringError },
@@ -145,9 +149,10 @@ export async function deleteCourseFormAction(formData: FormData) {
     redirectToCourses(
       returnPath,
       "error",
-      offeringError?.message ??
-        prerequisiteReferenceError?.message ??
+      parseSupabaseError(
+        offeringError ?? prerequisiteReferenceError,
         "Không thể kiểm tra ràng buộc môn học.",
+      ),
     );
   }
 
@@ -173,7 +178,11 @@ export async function deleteCourseFormAction(formData: FormData) {
     .eq("id", courseId);
 
   if (deleteError) {
-    redirectToCourses(returnPath, "error", deleteError.message);
+    redirectToCourses(
+      returnPath,
+      "error",
+      parseSupabaseError(deleteError, "Không thể xóa môn học."),
+    );
   }
 
   await createAuditLog({

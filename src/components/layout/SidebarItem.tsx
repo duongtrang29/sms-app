@@ -6,6 +6,7 @@ import {
   FloatingPortal,
   offset,
   shift,
+  useClick,
   useDismiss,
   useFloating,
   useFocus,
@@ -13,12 +14,13 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react";
+import { ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { cn } from "@/lib/utils";
 import type { SidebarNavItem } from "@/components/layout/navigation-config";
+import { cn } from "@/lib/utils";
 
 type SidebarItemProps = {
   collapsed: boolean;
@@ -33,7 +35,10 @@ function isActivePath(pathname: string, href: string) {
 export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [expandedByUser, setExpandedByUser] = useState(false);
   const [floatingOpen, setFloatingOpen] = useState(false);
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
 
   const hasChildren = Boolean(item.children && item.children.length > 0);
   const firstChildHref = item.children?.[0]?.href;
@@ -44,22 +49,41 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
   }, [item.children, pathname]);
 
   const active = (item.href ? isActivePath(pathname, item.href) : false) || childIsActive;
+  const expanded = childIsActive || expandedByUser;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setIsCoarsePointer(mediaQuery.matches);
+
+    update();
+    mediaQuery.addEventListener("change", update);
+
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
 
   const { refs, floatingStyles, context } = useFloating({
     open: floatingOpen,
     onOpenChange: setFloatingOpen,
     placement: "right-start",
-    middleware: [offset(8), flip(), shift({ padding: 8 })],
+    middleware: [offset(10), flip(), shift({ padding: 8 })],
     whileElementsMounted: autoUpdate,
   });
 
   const hover = useHover(context, {
-    enabled: collapsed && hasChildren,
+    enabled: collapsed && hasChildren && !isCoarsePointer,
     move: false,
     delay: {
-      open: 80,
+      open: 70,
       close: 120,
     },
+  });
+  const click = useClick(context, {
+    enabled: collapsed && hasChildren,
+    event: "mousedown",
   });
   const focus = useFocus(context, {
     enabled: collapsed && hasChildren,
@@ -71,90 +95,154 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
 
   const { getReferenceProps, getFloatingProps } = useInteractions([
     hover,
+    click,
     focus,
     dismiss,
     role,
   ]);
-  const setReference = refs.setReference;
-  const setFloating = refs.setFloating;
+  const setReference = useCallback(
+    (node: HTMLElement | null) => {
+      refs.setReference(node);
+    },
+    [refs],
+  );
+  const setFloating = useCallback(
+    (node: HTMLElement | null) => {
+      refs.setFloating(node);
+    },
+    [refs],
+  );
 
   const ItemIcon = item.icon;
 
+  if (!hasChildren || !collapsed) {
+    return (
+      <div className="space-y-1">
+        {hasChildren ? (
+          <button
+            aria-expanded={expanded}
+            className={cn(
+              "flex min-h-[44px] w-full items-center rounded-lg border px-3 py-2 text-sm transition-colors",
+              "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+              active
+                ? "border-blue-200 bg-blue-50 text-blue-700"
+                : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
+              collapsed ? "justify-center" : "gap-2",
+            )}
+            onClick={() => setExpandedByUser((prev) => !prev)}
+            type="button"
+          >
+            <ItemIcon className="size-4 shrink-0" />
+            <span className={cn("min-w-0 flex-1 truncate", collapsed && "hidden")}>
+              {item.label}
+            </span>
+            <ChevronRightIcon
+              className={cn(
+                "size-4 shrink-0 transition-transform",
+                expanded && "rotate-90",
+                collapsed && "hidden",
+              )}
+            />
+          </button>
+        ) : (
+          <Link
+            className={cn(
+              "flex min-h-[44px] items-center rounded-lg border px-3 py-2 text-sm transition-colors",
+              "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+              active
+                ? "border-blue-200 bg-blue-50 text-blue-700"
+                : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
+              collapsed ? "justify-center" : "gap-2",
+            )}
+            href={targetHref}
+            onClick={() => onNavigate?.()}
+            onFocus={() => {
+              router.prefetch(targetHref);
+            }}
+            onMouseEnter={() => {
+              router.prefetch(targetHref);
+            }}
+            title={collapsed ? item.label : undefined}
+          >
+            <ItemIcon className="size-4 shrink-0" />
+            <span className={cn("min-w-0 flex-1 truncate", collapsed && "hidden")}>
+              {item.label}
+            </span>
+          </Link>
+        )}
+
+        {hasChildren ? (
+          <div
+            className={cn(
+              "overflow-hidden transition-all duration-200 ease-out",
+              expanded ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0",
+            )}
+          >
+            <div className="mt-1 space-y-1 pl-4">
+              {item.children?.map((child) => {
+                const ChildIcon = child.icon;
+                const childActive = isActivePath(pathname, child.href);
+
+                return (
+                  <Link
+                    className={cn(
+                      "flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
+                      "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+                      childActive
+                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
+                    )}
+                    href={child.href}
+                    key={child.href}
+                    onClick={() => onNavigate?.()}
+                    onFocus={() => {
+                      router.prefetch(child.href);
+                    }}
+                    onMouseEnter={() => {
+                      router.prefetch(child.href);
+                    }}
+                  >
+                    <ChildIcon className="size-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{child.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1">
-      <Link
-        {...getReferenceProps({
-          onClick: () => {
-            onNavigate?.();
-          },
-        })}
+      <button
+        {...getReferenceProps()}
+        aria-expanded={floatingOpen}
         className={cn(
-          "group flex h-11 min-h-[44px] items-center rounded-md border px-3 text-sm transition-colors",
+          "flex min-h-[44px] w-full items-center justify-center rounded-lg border px-3 py-2 text-sm transition-colors",
           "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
           active
             ? "border-blue-200 bg-blue-50 text-blue-700"
-            : "border-transparent text-gray-700 hover:border-gray-200 hover:bg-gray-50",
-          collapsed ? "justify-center" : "gap-2",
+            : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
         )}
-        href={targetHref}
-        onFocus={() => {
-          router.prefetch(targetHref);
-        }}
-        onMouseEnter={() => {
-          router.prefetch(targetHref);
-        }}
-        // eslint-disable-next-line react-hooks/refs
+        onClick={() => setFloatingOpen((open) => !open)}
         ref={setReference}
-        title={collapsed ? item.label : undefined}
+        title={item.label}
+        type="button"
       >
         <ItemIcon className="size-4 shrink-0" />
-        <span
-          className={cn(
-            "overflow-hidden whitespace-nowrap",
-            collapsed ? "w-0" : "w-auto flex-1",
-          )}
-        >
-          {item.label}
-        </span>
-      </Link>
+      </button>
 
-      {!collapsed && hasChildren ? (
-        <div className="space-y-1 pl-6">
-          {item.children?.map((child) => {
-            const ChildIcon = child.icon;
-            const childActive = isActivePath(pathname, child.href);
-
-            return (
-              <Link
-                className={cn(
-                  "flex h-10 min-h-[40px] items-center gap-2 rounded-md border px-3 text-sm",
-                  "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
-                  childActive
-                    ? "border-blue-200 bg-blue-50 text-blue-700"
-                    : "border-transparent text-gray-600 hover:border-gray-200 hover:bg-gray-50",
-                )}
-                href={child.href}
-                key={child.href}
-                onClick={() => onNavigate?.()}
-              >
-                <ChildIcon className="size-4" />
-                <span className="min-w-0 flex-1 truncate">{child.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {collapsed && hasChildren && floatingOpen ? (
+      {floatingOpen ? (
         <FloatingPortal>
           <div
             {...getFloatingProps()}
-            className="z-50 min-w-[220px] rounded-lg border border-gray-200 bg-white p-2 shadow-lg"
-            // eslint-disable-next-line react-hooks/refs
+            className="z-50 min-w-[248px] rounded-xl border border-border bg-card p-2 shadow-[var(--shadow-dropdown)]"
             ref={setFloating}
             style={floatingStyles}
           >
-            <p className="px-2 pb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+            <p className="px-2 pb-2 text-xs font-semibold tracking-wide text-muted-foreground">
               {item.label}
             </p>
             <div className="space-y-1">
@@ -165,17 +253,26 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
                 return (
                   <Link
                     className={cn(
-                      "flex h-10 min-h-[40px] items-center gap-2 rounded-md border px-3 text-sm",
+                      "flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
                       "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
                       childActive
                         ? "border-blue-200 bg-blue-50 text-blue-700"
-                        : "border-transparent text-gray-700 hover:border-gray-200 hover:bg-gray-50",
+                        : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
                     )}
                     href={child.href}
                     key={child.href}
-                    onClick={() => onNavigate?.()}
+                    onClick={() => {
+                      setFloatingOpen(false);
+                      onNavigate?.();
+                    }}
+                    onFocus={() => {
+                      router.prefetch(child.href);
+                    }}
+                    onMouseEnter={() => {
+                      router.prefetch(child.href);
+                    }}
                   >
-                    <ChildIcon className="size-4" />
+                    <ChildIcon className="size-4 shrink-0" />
                     <span className="min-w-0 flex-1 truncate">{child.label}</span>
                   </Link>
                 );

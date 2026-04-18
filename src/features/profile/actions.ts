@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { failure, parseWithSchema, success } from "@/lib/actions";
 import { createAuditLog } from "@/lib/audit";
+import { parseSupabaseError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { updateProfileSchema } from "@/features/profile/schemas";
 import type { ActionState } from "@/types/app";
@@ -26,7 +27,7 @@ export async function updateProfileAction(
     } = await supabase.auth.getUser();
 
     if (userError) {
-      return failure(userError.message);
+      return failure(parseSupabaseError(userError, "Không thể xác thực tài khoản."));
     }
 
     if (!user) {
@@ -40,7 +41,7 @@ export async function updateProfileAction(
       .maybeSingle();
 
     if (profileError) {
-      return failure(profileError.message);
+      return failure(parseSupabaseError(profileError, "Không thể tải hồ sơ cá nhân."));
     }
 
     const typedProfile = profile as { status: string } | null;
@@ -61,7 +62,7 @@ export async function updateProfileAction(
       .eq("id", user.id);
 
     if (updateError) {
-      return failure(updateError.message);
+      return failure(parseSupabaseError(updateError, "Không thể cập nhật hồ sơ cá nhân."));
     }
 
     await createAuditLog({
@@ -74,8 +75,6 @@ export async function updateProfileAction(
     revalidatePath("/profile");
     return success("Đã cập nhật hồ sơ cá nhân.");
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Lỗi không xác định";
-    return failure(message);
+    return failure(parseSupabaseError(error, "Không thể cập nhật hồ sơ cá nhân."));
   }
 }

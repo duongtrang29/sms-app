@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAcademicClasses } from "@/features/academic-classes/queries";
 import {
   getStudentById,
-  listStudentsSnapshot,
+  listStudentsSnapshotPaged,
   type StudentRecord,
 } from "@/features/students/queries";
 import {
@@ -77,6 +77,16 @@ const ACADEMIC_STATUS_FILTERS: ReadonlyArray<StudentRecord["current_status"]> = 
   "GRADUATED",
   "DROPPED",
 ];
+const STUDENTS_PAGE_SIZE = 20;
+
+function resolvePageNumber(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 1;
+  }
+
+  return parsed;
+}
 
 async function StudentEditorCard({
   academicClasses,
@@ -99,16 +109,34 @@ async function StudentEditorCard({
   );
 }
 
-export default async function StudentsPage({ searchParams }: StudentsPageProps) {
+function StudentsPageSkeleton() {
+  return (
+    <div className="app-subtle-surface p-6 text-caption text-muted-foreground">
+      Đang tải danh sách sinh viên...
+    </div>
+  );
+}
+
+export default function StudentsPage({ searchParams }: StudentsPageProps) {
+  return (
+    <Suspense fallback={<StudentsPageSkeleton />}>
+      <StudentsPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function StudentsPageContent({ searchParams }: StudentsPageProps) {
   const resolvedSearchParams = await searchParams;
   const accessFilter = getSearchParamString(resolvedSearchParams, "access");
   const academicFilter = getSearchParamString(resolvedSearchParams, "academic");
   const classFilter = getSearchParamString(resolvedSearchParams, "class");
+  const pageParam = getSearchParamString(resolvedSearchParams, "page");
   const editId = getSearchParamString(resolvedSearchParams, "edit") || null;
   const error = getSearchParamString(resolvedSearchParams, "error");
   const queryValue = getSearchParamString(resolvedSearchParams, "q");
   const success = getSearchParamString(resolvedSearchParams, "success");
   const mode = getSearchParamString(resolvedSearchParams, "mode");
+  const currentPage = resolvePageNumber(pageParam);
 
   const normalizedAccessFilter = ACCESS_STATUS_FILTERS.includes(
     accessFilter as StudentRecord["access_status"],
@@ -122,17 +150,25 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     : undefined;
   const normalizedClassFilter = classFilter || undefined;
   const studentFilters = {
-    limit: 500,
+    page: currentPage,
+    pageSize: STUDENTS_PAGE_SIZE,
     ...(normalizedClassFilter ? { academicClassId: normalizedClassFilter } : {}),
     ...(normalizedAccessFilter ? { accessStatus: normalizedAccessFilter } : {}),
     ...(normalizedAcademicFilter ? { currentStatus: normalizedAcademicFilter } : {}),
     ...(queryValue ? { query: queryValue } : {}),
   };
 
-  const [academicClasses, studentsSnapshot] = await Promise.all([
+  const [academicClasses, initialStudentsSnapshot] = await Promise.all([
     listAcademicClasses(),
-    listStudentsSnapshot(studentFilters),
+    listStudentsSnapshotPaged(studentFilters),
   ]);
+  const studentsSnapshot =
+    initialStudentsSnapshot.page > initialStudentsSnapshot.pageCount
+      ? await listStudentsSnapshotPaged({
+          ...studentFilters,
+          page: initialStudentsSnapshot.pageCount,
+        })
+      : initialStudentsSnapshot;
 
   const classMap = new Map(
     academicClasses.map((academicClass) => [
@@ -159,6 +195,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     ["access", accessFilter],
     ["academic", academicFilter],
     ["class", classFilter],
+    ["page", String(studentsSnapshot.page)],
   ]);
   const isCreateOpen = mode === "create" || mode === "import";
   const isEditorOpen = isCreateOpen || Boolean(editId);
@@ -213,16 +250,16 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           value={studentsSnapshot.summary.activeAcademic}
         />
         <StatCard
-          description="Số bản ghi đang hiển thị theo bộ lọc."
+          description="Tổng bản ghi khớp theo bộ lọc hiện tại."
           label="Dòng đang hiển thị"
           tone="neutral"
-          value={rows.length}
+          value={studentsSnapshot.total}
         />
       </div>
       <SectionPanel>
         <FilterToolbar
-          key={`${queryValue}|${accessFilter}|${academicFilter}|${classFilter}`}
-          resultCount={rows.length}
+          key={`${queryValue}|${accessFilter}|${academicFilter}|${classFilter}|${currentPage}`}
+          resultCount={studentsSnapshot.total}
           searchPlaceholder="Tìm MSSV, họ tên, lớp"
           searchValue={queryValue}
           selects={[
@@ -256,7 +293,23 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           ]}
         />
       </SectionPanel>
-      <StudentsTable data={rows} returnTo={returnTo} />
+      <StudentsTable
+        data={rows}
+        returnTo={returnTo}
+        serverPagination={{
+          page: studentsSnapshot.page,
+          pageCount: studentsSnapshot.pageCount,
+          pageSize: studentsSnapshot.pageSize,
+          pathname: "/admin/students",
+          query: {
+            ...(queryValue ? { q: queryValue } : {}),
+            ...(accessFilter ? { access: accessFilter } : {}),
+            ...(academicFilter ? { academic: academicFilter } : {}),
+            ...(classFilter ? { class: classFilter } : {}),
+          },
+          total: studentsSnapshot.total,
+        }}
+      />
       <RoutePanel
         badge={
           editId

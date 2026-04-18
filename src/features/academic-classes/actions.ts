@@ -11,8 +11,9 @@ import {
 } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { academicClassSchema } from "@/features/academic-classes/schemas";
 import type { ActionState } from "@/types/app";
 
@@ -37,7 +38,7 @@ export async function upsertAcademicClassAction(
     return failure("Thông tin lớp sinh hoạt chưa hợp lệ.", parsed.errors);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const payload = {
     code: parsed.data.code.toUpperCase(),
     cohort_year: parsed.data.cohort_year,
@@ -62,7 +63,8 @@ export async function upsertAcademicClassAction(
       ]);
 
       return failure(
-        fieldErrors?.code?.[0] ?? "Không thể cập nhật lớp sinh hoạt.",
+        fieldErrors?.code?.[0] ??
+          parseSupabaseError(error, "Không thể cập nhật lớp sinh hoạt."),
         fieldErrors,
       );
     }
@@ -90,7 +92,8 @@ export async function upsertAcademicClassAction(
       ]);
 
       return failure(
-        fieldErrors?.code?.[0] ?? "Không thể tạo lớp sinh hoạt.",
+        fieldErrors?.code?.[0] ??
+          parseSupabaseError(error, "Không thể tạo lớp sinh hoạt."),
         fieldErrors,
       );
     }
@@ -126,7 +129,7 @@ export async function toggleAcademicClassStatusFormAction(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const isActive = nextStatus === "ACTIVE";
   const { error } = await supabase
     .from("academic_classes")
@@ -134,7 +137,11 @@ export async function toggleAcademicClassStatusFormAction(formData: FormData) {
     .eq("id", academicClassId);
 
   if (error) {
-    redirectToAcademicClasses(returnPath, "error", error.message);
+    redirectToAcademicClasses(
+      returnPath,
+      "error",
+      parseSupabaseError(error, "Không thể cập nhật trạng thái lớp sinh hoạt."),
+    );
   }
 
   await createAuditLog({

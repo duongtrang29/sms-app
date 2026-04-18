@@ -16,6 +16,7 @@ import {
   updateManagedUser,
 } from "@/lib/admin-users";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { lecturerSchema } from "@/features/lecturers/schemas";
@@ -97,7 +98,8 @@ export async function upsertLecturerAction(
         ]);
 
         return failure(
-          fieldErrors?.employee_code?.[0] ?? "Không thể cập nhật giảng viên.",
+          fieldErrors?.employee_code?.[0] ??
+            parseSupabaseError(error, "Không thể cập nhật giảng viên."),
           fieldErrors,
         );
       }
@@ -148,7 +150,8 @@ export async function upsertLecturerAction(
         ]);
 
         return failure(
-          fieldErrors?.employee_code?.[0] ?? "Không thể tạo hồ sơ giảng viên.",
+          fieldErrors?.employee_code?.[0] ??
+            parseSupabaseError(error, "Không thể tạo hồ sơ giảng viên."),
           fieldErrors,
         );
       }
@@ -166,9 +169,14 @@ export async function upsertLecturerAction(
       }
     }
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Không thể xử lý giảng viên.";
-    const fieldErrors = matchServerFieldErrors(message, [
+    const rawMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "";
+    const message = parseSupabaseError(rawMessage, "Không thể xử lý giảng viên.");
+    const fieldErrors = matchServerFieldErrors(rawMessage, [
       {
         field: "email",
         message: "Email này đã được sử dụng.",
@@ -230,7 +238,11 @@ export async function toggleLecturerStatusFormAction(formData: FormData) {
     .eq("role_code", "LECTURER");
 
   if (error) {
-    redirectToLecturers(returnPath, "error", error.message);
+    redirectToLecturers(
+      returnPath,
+      "error",
+      parseSupabaseError(error, "Không thể cập nhật trạng thái giảng viên."),
+    );
   }
 
   const auditResult = await tryCreateAuditLog({

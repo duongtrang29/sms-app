@@ -1,35 +1,37 @@
-# Kế Hoạch Test Và Kiểm Thử SMS (Theo Báo Cáo)
+# Kế Hoạch Kiểm Thử SMS (Bản Mới Nhất)
 
-Cập nhật: 17/04/2026  
-Nguồn đối chiếu chính:
-
-1. `docs/reports/security_review.md`
-2. `docs/reports/performance_review.md`
-3. `docs/reports/routes_check_report.md`
+Cập nhật: 19/04/2026
 
 ## 1. Mục tiêu
 
-1. Xác nhận hệ thống chạy đúng nghiệp vụ theo 3 vai trò `ADMIN/LECTURER/STUDENT`.
-2. Xác nhận các rủi ro chính trong báo cáo đã được kiểm tra đầy đủ.
-3. Chốt tiêu chí pass/fail trước khi release.
+1. Xác nhận flow chính hoạt động đúng cho `ADMIN/LECTURER/STUDENT`.
+2. Xác nhận dữ liệu và trạng thái DB cập nhật thật, không success ảo.
+3. Xác nhận các trang đã fix theo báo cáo vận hành gần nhất.
 
 ## 2. Môi trường kiểm thử
 
-1. Frontend local: `http://localhost:3000`
-2. Backend: Supabase DEV đã chạy `supabase/migrations/0001_schema.sql`
-3. Dữ liệu: chọn 1 bộ
-   - `npm run seed:demo`
-   - hoặc `supabase/seed.sql`
+1. App local: `http://localhost:3000`
+2. DB: Supabase DEV đã chạy `supabase/migrations/0001_schema.sql`
+3. Seed data:
 
-Tài khoản test nhanh (nếu dùng `seed:demo`):
+```bash
+npm run db:clear
+npm run db:seed
+```
 
-1. `ADMIN`: `admin.demo@sms.local` / `Demo@123456`
-2. `LECTURER`: `ha.nguyen@sms.local` / `Demo@123456`
-3. `STUDENT`: `se22001@sms.local` / `Demo@123456`
+## 3. Tài khoản kiểm thử chuẩn
 
-## 3. Test tự động
+1. Admin: `admin@sms.edu.vn / Admin@123456`
+2. Lecturer: `gv.nguyen@sms.edu.vn / Gv@123456`
+3. Lecturer: `gv.tran@sms.edu.vn / Gv@123456`
+4. Student: `sv.003@sms.edu.vn / Sv@123456`
+5. Student: `sv.004@sms.edu.vn / Sv@123456`
+6. Student: `sv.005@sms.edu.vn / Sv@123456`
+7. Student bị khóa: `sv.006@sms.edu.vn / Sv@123456`
 
-### 3.1 Lệnh chạy
+## 4. Test kỹ thuật tự động
+
+Chạy:
 
 ```bash
 npm run lint
@@ -38,125 +40,107 @@ npm run check
 npm run build
 ```
 
-### 3.2 Tiêu chí pass
+Tiêu chí pass:
 
 1. Không có TypeScript/build error.
-2. `npm run check` pass.
-3. Warning React Compiler tại DataTable được ghi nhận là warning chấp nhận.
+2. App build thành công.
 
-## 4. Checklist kiểm thử thủ công (SIT/UAT)
+## 5. Checklist SIT/UAT theo flow
 
-## 4.1 Auth và profile
+## 5.1 Auth + Middleware
 
-| ID | Vai trò | Bước kiểm thử | Kết quả mong đợi |
-|---|---|---|---|
-| TC-AUTH-01 | tất cả | Đăng nhập bằng account hợp lệ | Đăng nhập thành công, vào dashboard theo role |
-| TC-AUTH-02 | tất cả | Quên mật khẩu -> mở link reset | Link callback đúng domain, đổi mật khẩu thành công |
-| TC-AUTH-03 | tất cả | Đổi mật khẩu tại `/profile` | Cập nhật thành công, đăng nhập lại được |
+| ID | Bước kiểm thử | Kết quả mong đợi |
+|---|---|---|
+| TC-AUTH-01 | Login `admin@sms.edu.vn` | Redirect đúng vào khu vực admin |
+| TC-AUTH-02 | Login `sv.006@sms.edu.vn` | Bị chặn do `INACTIVE` |
+| TC-AUTH-03 | User đã login truy cập route sai role (ví dụ student vào `/admin`) | Redirect về dashboard đúng role |
 
-## 4.2 Student flow
+## 5.2 Admin offerings `/admin/offerings`
 
-| ID | Vai trò | Bước kiểm thử | Kết quả mong đợi |
-|---|---|---|---|
-| TC-STU-01 | STUDENT | Đăng ký học phần hợp lệ | Thành công |
-| TC-STU-02 | STUDENT | Đăng ký vi phạm điều kiện (tiên quyết/trùng lịch/quá tín chỉ/hết chỗ) | Bị chặn với thông báo rõ |
-| TC-STU-03 | STUDENT | Hủy đăng ký học phần trong cửa sổ cho phép | Thành công, trạng thái enrollment cập nhật |
-| TC-STU-04 | STUDENT | Gửi yêu cầu phúc khảo | Thành công, trạng thái ban đầu đúng |
+| ID | Bước kiểm thử | Kết quả mong đợi |
+|---|---|---|
+| TC-OFF-01 | Tạo học phần mới hợp lệ | Lưu thành công + list cập nhật ngay |
+| TC-OFF-02 | Tạo lịch học trùng phòng/trùng giờ | Bị chặn với message từ DB |
+| TC-OFF-03 | Mở đăng ký/đóng đăng ký | Status và thời điểm mở/đóng cập nhật đúng |
 
-## 4.3 Lecturer flow
+## 5.3 Student enrollment `/student/enrollment`
 
-| ID | Vai trò | Bước kiểm thử | Kết quả mong đợi |
-|---|---|---|---|
-| TC-LEC-01 | LECTURER | Nhập điểm thành phần tại `/lecturer/grades/[id]` | Lưu được `DRAFT` |
-| TC-LEC-02 | LECTURER | Submit bảng điểm | Chỉ submit khi dữ liệu hợp lệ |
-| TC-LEC-03 | LECTURER | Sửa điểm khi trạng thái không cho phép | Bị chặn đúng state machine |
-| TC-LEC-04 | LECTURER | Theo dõi phúc khảo lớp phụ trách | Hiển thị đúng theo phân quyền |
+| ID | Bước kiểm thử | Kết quả mong đợi |
+|---|---|---|
+| TC-ENR-01 | `SV003` đăng ký HP2 hợp lệ | Thành công, card chuyển sang đã đăng ký |
+| TC-ENR-02 | `SV003` đăng ký HP3 (đã full) | Bị từ chối với lỗi đúng từ RPC |
+| TC-ENR-03 | `SV003` hủy HP1 | Thành công, `enrolled_count` giảm đúng |
 
-## 4.4 Admin flow
+## 5.4 Lecturer grades `/lecturer/offerings/[offeringId]`
 
-| ID | Vai trò | Bước kiểm thử | Kết quả mong đợi |
-|---|---|---|---|
-| TC-ADM-01 | ADMIN | Tạo sinh viên/giảng viên | Tạo đủ auth user + profile + record nghiệp vụ |
-| TC-ADM-02 | ADMIN | Quản lý học phần mở + lịch học | Lưu thành công, chặn trùng phòng đúng |
-| TC-ADM-03 | ADMIN | Duyệt/khóa/mở khóa điểm | Chỉ cho phép transition hợp lệ |
-| TC-ADM-04 | ADMIN | Xử lý phúc khảo | Cập nhật trạng thái + ghi chú đúng |
-| TC-ADM-05 | ADMIN | Vào báo cáo/audit log | Dữ liệu hiển thị đúng, không lỗi quyền |
+| ID | Bước kiểm thử | Kết quả mong đợi |
+|---|---|---|
+| TC-GRD-01 | Lecturer nhập điểm HP1 và save draft | Lưu batch thành công |
+| TC-GRD-02 | Submit bảng điểm khi thiếu cột điểm | Nút submit bị chặn |
+| TC-GRD-03 | Submit bảng điểm đầy đủ | Status chuyển `SUBMITTED` |
+| TC-GRD-04 | Offering đã `LOCKED` | Input bị disable, không cho lưu |
 
-## 5. Checklist theo nhóm rủi ro báo cáo
+## 5.5 Admin grades `/admin/grades`
 
-## 5.1 Security / Data Integrity
+| ID | Bước kiểm thử | Kết quả mong đợi |
+|---|---|---|
+| TC-APP-01 | Duyệt HP5 | Các grade `SUBMITTED -> APPROVED` |
+| TC-APP-02 | Reject bảng điểm với lý do | Grade về `DRAFT` + lưu lý do |
+| TC-APP-03 | Lock bảng điểm | Grade chuyển `LOCKED` |
 
-| ID | Mapping báo cáo | Kịch bản | Kết quả mong đợi |
-|---|---|---|---|
-| SEC-01 | security_review | Sinh viên đọc/sửa dữ liệu của sinh viên khác | Bị chặn bởi RLS |
-| SEC-02 | security_review | Gọi `log_audit_event` không đúng quyền | Không ghi được log tùy ý |
-| SEC-03 | security_review | Gửi transition điểm sai (ví dụ `DRAFT -> APPROVED`) | DB từ chối |
-| SEC-04 | security_review | Xóa dữ liệu gây vi phạm quan hệ học tập | Bị chặn theo FK/rule |
+## 5.6 Student grades `/student/grades`
 
-## 5.2 Performance / UX
+| ID | Bước kiểm thử | Kết quả mong đợi |
+|---|---|---|
+| TC-STG-01 | `SV004` xem điểm | Chỉ thấy `APPROVED/LOCKED` |
+| TC-STG-02 | `SV004` gửi phúc khảo | Tạo request thành công |
+| TC-STG-03 | `SV005` gửi phúc khảo lần 2 | Bị chặn do đã có `PENDING` |
 
-| ID | Mapping báo cáo | Kịch bản | Kết quả mong đợi |
-|---|---|---|---|
-| PERF-01 | performance_review | Mở `/admin/audit-logs` với dữ liệu lớn | Không timeout |
-| PERF-02 | performance_review | Mở danh sách phúc khảo, lọc liên tục | UI ổn định |
-| PERF-03 | performance_review | Mở trang student enrollment/grades với dữ liệu lớn | Không treo |
+## 5.7 Reports `/admin/reports`
 
-## 5.3 Route / UC consistency
-
-| ID | Mapping báo cáo | Kịch bản | Kết quả mong đợi |
-|---|---|---|---|
-| ROUTE-01 | routes_check_report | Truy cập route chuẩn theo role | Hoạt động đúng |
-| ROUTE-02 | routes_check_report | Truy cập alias legacy | Hoạt động tương thích |
-| ROUTE-03 | routes_check_report | Truy cập route trái role | Bị chặn hoặc redirect đúng |
+| ID | Bước kiểm thử | Kết quả mong đợi |
+|---|---|---|
+| TC-RPT-01 | Mở trang báo cáo | Tải được dữ liệu view, không trắng trang |
+| TC-RPT-02 | Export Excel | File tải thành công, dữ liệu đúng cột |
 
 ## 6. SQL verify sau test
 
-## 6.1 Enrollment + grade
+### 6.1 Enrollment theo sinh viên
 
 ```sql
-select id, student_id, course_offering_id, status
-from public.enrollments
-where student_id = '<STUDENT_UUID>'
-order by created_at desc;
+select e.id, s.student_code, co.section_code, e.status, e.enrolled_at
+from public.enrollments e
+join public.students s on s.id = e.student_id
+join public.course_offerings co on co.id = e.course_offering_id
+where s.student_code = 'SV003'
+order by e.created_at;
 ```
 
+### 6.2 Grade status theo học phần
+
 ```sql
-select id, enrollment_id, status, attendance_score, midterm_score, final_score, total_score
-from public.grades
-where enrollment_id = '<ENROLLMENT_UUID>';
+select co.section_code, g.status, count(*) as row_count
+from public.grades g
+join public.enrollments e on e.id = g.enrollment_id
+join public.course_offerings co on co.id = e.course_offering_id
+where co.section_code in ('HP5','HP6')
+group by co.section_code, g.status
+order by co.section_code, g.status;
 ```
 
-## 6.2 Regrade
+### 6.3 Regrade theo sinh viên
 
 ```sql
-select id, grade_id, student_id, status, resolved_total_score, resolution_note
-from public.regrade_requests
-where student_id = '<STUDENT_UUID>'
-order by created_at desc;
-```
-
-## 6.3 Audit
-
-```sql
-select id, actor_id, action, entity_type, entity_id, created_at
-from public.audit_logs
-order by created_at desc
-limit 50;
+select rr.id, s.student_code, rr.status, rr.reason, rr.created_at
+from public.regrade_requests rr
+join public.students s on s.id = rr.student_id
+where s.student_code in ('SV004','SV005')
+order by rr.created_at desc;
 ```
 
 ## 7. Tiêu chí nghiệm thu
 
-1. Pass `lint + typecheck + check + build`.
-2. Pass toàn bộ test critical ở mục 4 và mục 5.
-3. Không có lỗi success ảo ở các mutate chính.
-4. Không có lệch quyền giữa UI route/action và backend policy trong flow chính.
-
-## 8. Mẫu ghi lỗi kiểm thử
-
-1. Mã test case: `TC-*`, `SEC-*`, `PERF-*`, `ROUTE-*`
-2. Môi trường: `DEV/STAGING/PROD`
-3. Vai trò + tài khoản test
-4. Bước tái hiện
-5. Kết quả thực tế
-6. Kỳ vọng
-7. Log/Screenshot/SQL chứng minh
+1. Pass mục 4 (lint/typecheck/build).
+2. Pass toàn bộ case critical ở mục 5.
+3. Không xuất hiện success ảo ở mutate chính.
+4. DB phản ánh đúng trạng thái sau thao tác UI.

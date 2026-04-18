@@ -17,6 +17,7 @@ import {
   updateManagedUser,
 } from "@/lib/admin-users";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -96,7 +97,8 @@ export async function upsertStudentAction(
         ]);
 
         return failure(
-          fieldErrors?.student_code?.[0] ?? "Không thể cập nhật sinh viên.",
+          fieldErrors?.student_code?.[0] ??
+            parseSupabaseError(error, "Không thể cập nhật sinh viên."),
           fieldErrors,
         );
       }
@@ -147,7 +149,8 @@ export async function upsertStudentAction(
         ]);
 
         return failure(
-          fieldErrors?.student_code?.[0] ?? "Không thể tạo hồ sơ sinh viên.",
+          fieldErrors?.student_code?.[0] ??
+            parseSupabaseError(error, "Không thể tạo hồ sơ sinh viên."),
           fieldErrors,
         );
       }
@@ -165,9 +168,14 @@ export async function upsertStudentAction(
       }
     }
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Không thể xử lý sinh viên.";
-    const fieldErrors = matchServerFieldErrors(message, [
+    const rawMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "";
+    const message = parseSupabaseError(rawMessage, "Không thể xử lý sinh viên.");
+    const fieldErrors = matchServerFieldErrors(rawMessage, [
       {
         field: "email",
         message: "Email này đã được sử dụng.",
@@ -296,14 +304,14 @@ export async function importStudentsAction(
 
       if (studentError) {
         await deleteManagedUser(userId);
-        errors.push(studentError.message);
+        errors.push(parseSupabaseError(studentError));
       } else if (managedCreateResult.status === "partial") {
         errors.push(
           `Sinh viên ${row.student_code} đã tạo nhưng thiếu audit log hệ thống.`,
         );
       }
     } catch (error) {
-      errors.push(error instanceof Error ? error.message : "Import lỗi.");
+      errors.push(parseSupabaseError(error, "Import lỗi."));
     }
   }
 
@@ -316,6 +324,96 @@ export async function importStudentsAction(
   }
 
   return success("Import sinh viên thành công.");
+}
+
+const STUDENT_ACCESS_STATUSES = ["ACTIVE", "INACTIVE", "LOCKED"] as const;
+type StudentAccessStatus = (typeof STUDENT_ACCESS_STATUSES)[number];
+
+function isStudentAccessStatus(value: string): value is StudentAccessStatus {
+  return STUDENT_ACCESS_STATUSES.includes(value as StudentAccessStatus);
+}
+
+async function updateStudentAccessStatus({
+  nextStatus,
+  studentId,
+}: {
+  nextStatus: StudentAccessStatus;
+  studentId: string;
+}) {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ status: nextStatus } as never)
+    .eq("id", studentId)
+    .eq("role_code", "STUDENT");
+
+  if (error) {
+    return {
+      error: parseSupabaseError(error, "Không thể cập nhật trạng thái sinh viên."),
+      success: false as const,
+    };
+  }
+
+  const auditResult = await tryCreateAuditLog({
+    action: nextStatus === "ACTIVE" ? "STUDENT_ACTIVATED" : "STUDENT_DEACTIVATED",
+    entityId: studentId,
+    entityType: "profiles",
+    metadata: {
+      status: nextStatus,
+    },
+    targetUserId: studentId,
+  });
+
+  revalidatePath("/admin/students");
+
+  return {
+    message:
+      nextStatus === "ACTIVE"
+        ? "Đã kích hoạt tài khoản sinh viên."
+        : "Đã tạm ngưng tài khoản sinh viên.",
+    success: true as const,
+    warning:
+      auditResult.status === "success"
+        ? null
+        : "Đã cập nhật trạng thái tài khoản nhưng không ghi được audit log.",
+  };
+}
+
+export async function toggleStudentStatusOptimisticAction(input: {
+  nextStatus: string;
+  studentId: string;
+}) {
+  await requireRole(["ADMIN"]);
+
+  if (!input.studentId || !input.nextStatus) {
+    return {
+      error: "Thiếu dữ liệu để cập nhật trạng thái sinh viên.",
+      success: false as const,
+    };
+  }
+
+  if (!isStudentAccessStatus(input.nextStatus)) {
+    return {
+      error: "Trạng thái tài khoản sinh viên không hợp lệ.",
+      success: false as const,
+    };
+  }
+
+  const result = await updateStudentAccessStatus({
+    nextStatus: input.nextStatus,
+    studentId: input.studentId,
+  });
+
+  if (!result.success) {
+    return result;
+  }
+
+  return {
+    message: result.message,
+    nextStatus: input.nextStatus,
+    success: true as const,
+    warning: result.warning,
+  };
 }
 
 export async function toggleStudentStatusFormAction(formData: FormData) {
@@ -333,41 +431,30 @@ export async function toggleStudentStatusFormAction(formData: FormData) {
     );
   }
 
-  const admin = createAdminClient();
-  const { error } = await admin
-    .from("profiles")
-    .update({ status: nextStatus } as never)
-    .eq("id", studentId)
-    .eq("role_code", "STUDENT");
-
-  if (error) {
-    redirectToStudents(returnPath, "error", error.message);
-  }
-
-  const auditResult = await tryCreateAuditLog({
-    action: nextStatus === "ACTIVE" ? "STUDENT_ACTIVATED" : "STUDENT_DEACTIVATED",
-    entityId: studentId,
-    entityType: "profiles",
-    metadata: {
-      status: nextStatus,
-    },
-    targetUserId: studentId,
-  });
-
-  if (auditResult.status !== "success") {
+  if (!isStudentAccessStatus(nextStatus)) {
     redirectToStudents(
       returnPath,
       "error",
-      "Đã cập nhật trạng thái tài khoản nhưng không ghi được audit log.",
+      "Trạng thái tài khoản sinh viên không hợp lệ.",
     );
   }
 
-  revalidatePath("/admin/students");
+  const result = await updateStudentAccessStatus({
+    nextStatus,
+    studentId,
+  });
+
+  if (!result.success) {
+    redirectToStudents(
+      returnPath,
+      "error",
+      result.error,
+    );
+  }
+
   redirectToStudents(
     returnPath,
-    "success",
-    nextStatus === "ACTIVE"
-      ? "Đã kích hoạt tài khoản sinh viên."
-      : "Đã tạm ngưng tài khoản sinh viên.",
+    result.warning ? "error" : "success",
+    result.warning ?? result.message,
   );
 }

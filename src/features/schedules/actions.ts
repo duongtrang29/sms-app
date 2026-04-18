@@ -6,8 +6,9 @@ import { redirect } from "next/navigation";
 import { failure, parseWithSchema } from "@/lib/actions";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { scheduleSchema } from "@/features/schedules/schemas";
 import type { ActionState } from "@/types/app";
 
@@ -43,7 +44,7 @@ export async function upsertScheduleAction(
     return failure("Thông tin lịch học chưa hợp lệ.", parsed.errors);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const payload = {
     course_offering_id: parsed.data.course_offering_id,
     day_of_week: parsed.data.day_of_week,
@@ -70,8 +71,9 @@ export async function upsertScheduleAction(
 
       return failure(
         fieldErrors
-          ? Object.values(fieldErrors)[0]?.[0] ?? error.message
-          : error.message || "Không thể cập nhật lịch học.",
+          ? Object.values(fieldErrors)[0]?.[0] ??
+              parseSupabaseError(error, "Không thể cập nhật lịch học.")
+          : parseSupabaseError(error, "Không thể cập nhật lịch học."),
         fieldErrors,
       );
     }
@@ -96,8 +98,9 @@ export async function upsertScheduleAction(
 
       return failure(
         fieldErrors
-          ? Object.values(fieldErrors)[0]?.[0] ?? error.message
-          : error.message || "Không thể tạo lịch học.",
+          ? Object.values(fieldErrors)[0]?.[0] ??
+              parseSupabaseError(error, "Không thể tạo lịch học.")
+          : parseSupabaseError(error, "Không thể tạo lịch học."),
         fieldErrors,
       );
     }

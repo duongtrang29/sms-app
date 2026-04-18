@@ -19,6 +19,8 @@ const badgeVariants = cva(
           "border-[color:var(--color-info)]/30 bg-[color:var(--color-info-soft)] text-[color:var(--color-info-foreground)]",
         neutral:
           "border-[color:var(--color-neutral)]/30 bg-[color:var(--color-neutral-soft)] text-[color:var(--color-neutral-foreground)]",
+        violet:
+          "border-purple-300 bg-purple-100 text-purple-800",
         destructive:
           "border-[color:var(--color-danger)]/30 bg-[color:var(--color-danger-soft)] text-[color:var(--color-danger-foreground)]",
         outline: "border-border bg-card text-foreground",

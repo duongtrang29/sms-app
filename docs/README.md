@@ -1,22 +1,16 @@
 # Docs Index (SMS)
 
-## 1. Tài liệu đang dùng
+## 1. Tài liệu chính đang dùng
 
-1. [Hướng dẫn sử dụng + setup DEV/PROD](./guides/HUONG_DAN_SU_DUNG_SETUP.md)
-2. [Kế hoạch kiểm thử theo báo cáo](./guides/KIEM_THU_THEO_BAO_CAO.md)
+1. [Hướng dẫn setup/chạy/deploy](./HUONG_DAN_SU_DUNG_SETUP.md)
+2. [Checklist kiểm thử SIT/UAT](./KIEM_THU_THEO_BAO_CAO.md)
 
-## 2. Tài liệu báo cáo kỹ thuật
+## 2. Tài liệu tham chiếu
 
-Nằm trong thư mục `docs/reports/`:
+1. `bao_cao_final.docx` (bản báo cáo nộp)
 
-1. `bc_cap_nhat.md`
-2. `changelog.md`
-3. `fix_plan.md`
-4. `performance_review.md`
-5. `routes_check_report.md`
-6. `schema_sync_report.md`
-7. `security_review.md`
+## 3. Nguyên tắc cập nhật docs
 
-## 3. Tài liệu Word nguồn
-
-Nằm trong `docs/archive/docx/` để lưu trữ, không dùng cho setup/run hằng ngày.
+1. Mọi thay đổi script setup/seed/deploy phải cập nhật lại `HUONG_DAN_SU_DUNG_SETUP.md`.
+2. Mọi thay đổi flow nghiệp vụ phải cập nhật lại `KIEM_THU_THEO_BAO_CAO.md`.
+3. Đường dẫn trong docs phải dùng path thật đang tồn tại trong repo.

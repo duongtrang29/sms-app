@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { unstable_noStore as noStore } from "next/cache";
 
 import { requireAuth, requireRole } from "@/lib/auth/session";
 import type { CourseOffering, Enrollment, Schedule } from "@/types/app";
 
 export async function listStudentEnrollments() {
+  noStore();
   const profile = await requireRole(["STUDENT"]);
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -20,6 +22,7 @@ export async function listStudentEnrollments() {
 }
 
 export async function listOpenOfferingsForStudent() {
+  noStore();
   await requireRole(["STUDENT"]);
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -36,6 +39,7 @@ export async function listOpenOfferingsForStudent() {
 }
 
 export async function listSchedulesForOfferings(offeringIds: string[]) {
+  noStore();
   if (!offeringIds.length) {
     return [] as Schedule[];
   }

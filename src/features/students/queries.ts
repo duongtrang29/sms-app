@@ -1,6 +1,10 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { unstable_noStore as noStore } from "next/cache";
+
+import { createClient } from "@/lib/supabase/server";
 
 const MAX_STUDENT_LIST_LIMIT = 500;
+const DEFAULT_STUDENT_PAGE_SIZE = 20;
+const MAX_STUDENT_PAGE_SIZE = 100;
 
 const STUDENT_SELECT_QUERY = `
   id,
@@ -41,6 +45,8 @@ export type StudentListFilters = {
   accessStatus?: StudentRecord["access_status"];
   currentStatus?: StudentRecord["current_status"];
   limit?: number;
+  page?: number;
+  pageSize?: number;
   query?: string;
 };
 
@@ -51,6 +57,13 @@ export type StudentListSnapshot = {
     activeAccess: number;
     totalStudents: number;
   };
+};
+
+export type StudentListPagedSnapshot = StudentListSnapshot & {
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
 };
 
 type StudentRow = {
@@ -108,6 +121,26 @@ function resolveLimit(limit: number | undefined) {
   return Math.min(limit, MAX_STUDENT_LIST_LIMIT);
 }
 
+function resolvePage(page: number | undefined) {
+  if (typeof page !== "number" || Number.isNaN(page)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.floor(page));
+}
+
+function resolvePageSize(pageSize: number | undefined) {
+  if (typeof pageSize !== "number" || Number.isNaN(pageSize)) {
+    return DEFAULT_STUDENT_PAGE_SIZE;
+  }
+
+  if (pageSize <= 0) {
+    return DEFAULT_STUDENT_PAGE_SIZE;
+  }
+
+  return Math.min(Math.floor(pageSize), MAX_STUDENT_PAGE_SIZE);
+}
+
 function mapStudentRow(row: StudentRow): StudentRecord {
   const profile = normalizeRelation(row.profiles);
   if (!profile) {
@@ -132,6 +165,7 @@ function mapStudentRow(row: StudentRow): StudentRecord {
 }
 
 async function fetchStudentSummary() {
+  noStore();
   const supabase = await createClient();
   const [
     { count: totalStudentsCount, error: totalStudentsError },
@@ -166,13 +200,20 @@ async function fetchStudentSummary() {
 }
 
 async function fetchStudentRows(filters: StudentListFilters = {}) {
+  noStore();
   const supabase = await createClient();
   const normalizedQuery = normalizeSearchQuery(filters.query);
   const resolvedLimit = resolveLimit(filters.limit);
+  const hasPagination =
+    typeof filters.page === "number" || typeof filters.pageSize === "number";
+  const page = resolvePage(filters.page);
+  const pageSize = resolvePageSize(filters.pageSize);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let queryBuilder = supabase
     .from("students")
-    .select(STUDENT_SELECT_QUERY)
+    .select(STUDENT_SELECT_QUERY, hasPagination ? { count: "exact" } : undefined)
     .order("student_code", { ascending: true });
 
   if (filters.academicClassId) {
@@ -194,20 +235,28 @@ async function fetchStudentRows(filters: StudentListFilters = {}) {
     );
   }
 
-  if (resolvedLimit) {
+  if (hasPagination) {
+    queryBuilder = queryBuilder.range(from, to);
+  } else if (resolvedLimit) {
     queryBuilder = queryBuilder.limit(resolvedLimit);
   }
 
-  const { data, error } = await queryBuilder;
+  const { count, data, error } = await queryBuilder;
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as StudentRow[]).map(mapStudentRow);
+  const items = ((data ?? []) as StudentRow[]).map(mapStudentRow);
+
+  return {
+    items,
+    total: hasPagination ? count ?? 0 : items.length,
+  };
 }
 
 async function fetchStudentRowById(studentId: string) {
+  noStore();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("students")
@@ -234,7 +283,8 @@ async function fetchStudentRowById(studentId: string) {
 export async function listStudents(
   filters: StudentListFilters = {},
 ): Promise<StudentRecord[]> {
-  return fetchStudentRows(filters);
+  const { items } = await fetchStudentRows(filters);
+  return items;
 }
 
 /**
@@ -245,7 +295,7 @@ export async function listStudents(
 export async function listStudentsSnapshot(
   filters: StudentListFilters = {},
 ): Promise<StudentListSnapshot> {
-  const [items, summary] = await Promise.all([
+  const [{ items }, summary] = await Promise.all([
     fetchStudentRows(filters),
     fetchStudentSummary(),
   ]);
@@ -253,6 +303,32 @@ export async function listStudentsSnapshot(
   return {
     items,
     summary,
+  };
+}
+
+/**
+ * Returns paged student records plus dashboard summary counters.
+ * @param filters optional filters applied to student list rows.
+ * @returns paged snapshot used by admin students page.
+ */
+export async function listStudentsSnapshotPaged(
+  filters: StudentListFilters = {},
+): Promise<StudentListPagedSnapshot> {
+  const page = resolvePage(filters.page);
+  const pageSize = resolvePageSize(filters.pageSize);
+
+  const [{ items, total }, summary] = await Promise.all([
+    fetchStudentRows({ ...filters, page, pageSize }),
+    fetchStudentSummary(),
+  ]);
+
+  return {
+    items,
+    page,
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
+    pageSize,
+    summary,
+    total,
   };
 }
 

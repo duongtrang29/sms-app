@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { buildPathWithUpdates, getStringField } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
+import { parseSupabaseError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 
 type GradeActionResult<T = void> =
@@ -64,7 +65,10 @@ async function requireActiveLecturer(
   } = await supabase.auth.getUser();
 
   if (userError) {
-    return { error: userError.message, success: false };
+    return {
+      error: parseSupabaseError(userError, "Không thể xác thực phiên đăng nhập."),
+      success: false,
+    };
   }
 
   if (!user) {
@@ -78,7 +82,10 @@ async function requireActiveLecturer(
     .maybeSingle();
 
   if (profileError) {
-    return { error: profileError.message, success: false };
+    return {
+      error: parseSupabaseError(profileError, "Không thể tải hồ sơ giảng viên."),
+      success: false,
+    };
   }
 
   const typedProfile = profile as
@@ -109,7 +116,10 @@ async function ensureLecturerOfferingAccess(
     .maybeSingle();
 
   if (error) {
-    return { error: error.message, success: false };
+    return {
+      error: parseSupabaseError(error, "Không thể kiểm tra phân công giảng dạy."),
+      success: false,
+    };
   }
 
   if (!data) {
@@ -131,7 +141,10 @@ async function ensureEnrollmentInOffering(
     .maybeSingle();
 
   if (error) {
-    return { error: error.message, success: false };
+    return {
+      error: parseSupabaseError(error, "Không thể tải dữ liệu enrollment."),
+      success: false,
+    };
   }
 
   const enrollment = data as
@@ -258,7 +271,10 @@ export async function saveGradeAction(
       .maybeSingle();
 
     if (existingError) {
-      return { error: existingError.message, success: false };
+      return {
+        error: parseSupabaseError(existingError, "Không thể kiểm tra bản ghi điểm."),
+        success: false,
+      };
     }
 
     const existingGrade = existing as { id: string } | null;
@@ -270,7 +286,10 @@ export async function saveGradeAction(
         .eq("id", existingGrade.id);
 
       if (error) {
-        return { error: error.message, success: false };
+        return {
+          error: parseSupabaseError(error, "Không thể cập nhật điểm."),
+          success: false,
+        };
       }
     } else {
       const { error } = await supabase
@@ -278,7 +297,10 @@ export async function saveGradeAction(
         .insert(payloadResult.data as never);
 
       if (error) {
-        return { error: error.message, success: false };
+        return {
+          error: parseSupabaseError(error, "Không thể tạo bản ghi điểm."),
+          success: false,
+        };
       }
     }
 
@@ -300,9 +322,10 @@ export async function saveGradeAction(
       success: true,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Lỗi không xác định";
-    return { error: message, success: false };
+    return {
+      error: parseSupabaseError(error, "Không thể lưu điểm."),
+      success: false,
+    };
   }
 }
 
@@ -357,7 +380,13 @@ export async function submitOfferingGradesAction(
       .neq("status", "DROPPED");
 
     if (enrollmentsError) {
-      return { error: enrollmentsError.message, success: false };
+      return {
+        error: parseSupabaseError(
+          enrollmentsError,
+          "Không thể tải danh sách sinh viên đăng ký.",
+        ),
+        success: false,
+      };
     }
 
     const enrollmentIds = ((enrollments as Array<{ id: string }>) ?? []).map(
@@ -379,7 +408,13 @@ export async function submitOfferingGradesAction(
       .in("enrollment_id", enrollmentIds as never);
 
     if (gradeLookupError) {
-      return { error: gradeLookupError.message, success: false };
+      return {
+        error: parseSupabaseError(
+          gradeLookupError,
+          "Không thể tải bảng điểm của học phần.",
+        ),
+        success: false,
+      };
     }
 
     const typedGradeRows =
@@ -451,7 +486,10 @@ export async function submitOfferingGradesAction(
       .in("enrollment_id", draftEnrollmentIds as never);
 
     if (error) {
-      return { error: error.message, success: false };
+      return {
+        error: parseSupabaseError(error, "Không thể gửi duyệt bảng điểm."),
+        success: false,
+      };
     }
 
     await createAuditLog({
@@ -471,9 +509,10 @@ export async function submitOfferingGradesAction(
       success: true,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Lỗi không xác định";
-    return { error: message, success: false };
+    return {
+      error: parseSupabaseError(error, "Không thể gửi duyệt bảng điểm."),
+      success: false,
+    };
   }
 }
 

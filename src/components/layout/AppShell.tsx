@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 import { MobileDrawer } from "@/components/layout/MobileDrawer";
 import { roleNavGroups } from "@/components/layout/navigation-config";
@@ -16,70 +17,65 @@ type AppShellProps = {
 };
 
 export function AppShell({ children, profile }: AppShellProps) {
+  const pathname = usePathname();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
-  const isMobile = useMediaQuery("(max-width: 767px)");
 
   const {
-    collapsed,
-    mobileOpen,
+    isCollapsed,
+    isMobileOpen,
     setMobileOpen,
-    setMode,
-    toggleMode,
+    toggleCollapsed,
   } = useSidebar();
 
+  const collapsed = isDesktop ? isCollapsed : true;
+  const sidebarWidth = collapsed ? "var(--sidebar-collapsed-w)" : "var(--sidebar-w)";
   const groups = roleNavGroups[profile.role_code];
-  const sidebarWidth = collapsed ? 64 : 240;
 
   useEffect(() => {
-    if (isDesktop) {
-      setMode("expanded");
-      return;
-    }
+    setMobileOpen(false);
+  }, [pathname, setMobileOpen]);
 
-    if (isTablet) {
-      setMode("collapsed");
-      return;
-    }
-
-    if (isMobile) {
-      setMode("collapsed");
+  useEffect(() => {
+    if (!isDesktop) {
       setMobileOpen(false);
     }
-  }, [isDesktop, isMobile, isTablet, setMobileOpen, setMode]);
+  }, [isDesktop, setMobileOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex min-h-screen overflow-hidden" style={{ "--sidebar-current-w": `${sidebarWidth}px` } as React.CSSProperties}>
-        <Sidebar
+    <div
+      className="relative min-h-screen bg-background lg:h-dvh lg:overflow-hidden"
+      style={{
+        "--sidebar-current-width": sidebarWidth,
+      } as React.CSSProperties}
+    >
+      <Sidebar collapsed={collapsed} groups={groups} profile={profile} />
+
+      <div
+        className="flex min-h-screen min-w-0 flex-1 flex-col transition-[margin-left] duration-300 lg:h-dvh lg:min-h-0"
+        style={{ marginLeft: isDesktop ? "var(--sidebar-current-width)" : 0 }}
+      >
+        <Topbar
           collapsed={collapsed}
           groups={groups}
+          onOpenMobile={() => setMobileOpen(true)}
+          onToggleSidebar={toggleCollapsed}
           profile={profile}
-          sidebarWidth={sidebarWidth}
+          showSidebarToggle={isDesktop}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col md:pl-[var(--sidebar-current-w)]">
-          <Topbar
-            collapsed={collapsed}
-            groups={groups}
-            onOpenMobile={() => setMobileOpen(true)}
-            onToggleSidebar={toggleMode}
-            profile={profile}
-          />
-
-          <main className="app-scrollbar min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
-            <div className="mx-auto flex min-w-0 w-full max-w-[var(--content-max-w)] flex-col gap-6">
-              {children}
-            </div>
-          </main>
-        </div>
-
-        <MobileDrawer
-          groups={groups}
-          onOpenChange={setMobileOpen}
-          open={mobileOpen}
-        />
+        <main className="touch-scroll flex-1 min-h-0 min-w-0 overflow-y-auto p-4 md:p-6">
+          <div className="mx-auto flex w-full max-w-[var(--content-max-w)] min-w-0 flex-col gap-6">
+            {children}
+          </div>
+        </main>
       </div>
+
+      <MobileDrawer
+        groups={groups}
+        onOpenChange={setMobileOpen}
+        open={isMobileOpen}
+        profile={profile}
+      />
     </div>
   );
 }

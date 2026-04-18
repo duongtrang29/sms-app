@@ -1,22 +1,27 @@
 ﻿import { create } from "zustand";
-
-export type SidebarMode = "expanded" | "collapsed";
+import { persist } from "zustand/middleware";
 
 type SidebarState = {
-  mobileOpen: boolean;
-  mode: SidebarMode;
+  isCollapsed: boolean;
+  isMobileOpen: boolean;
+  setCollapsed: (next: boolean) => void;
   setMobileOpen: (open: boolean) => void;
-  setMode: (mode: SidebarMode) => void;
-  toggleMode: () => void;
+  toggleCollapsed: () => void;
 };
 
-export const useSidebarStore = create<SidebarState>((set) => ({
-  mode: "expanded",
-  mobileOpen: false,
-  setMode: (mode) => set({ mode }),
-  toggleMode: () =>
-    set((state) => ({
-      mode: state.mode === "expanded" ? "collapsed" : "expanded",
-    })),
-  setMobileOpen: (mobileOpen) => set({ mobileOpen }),
-}));
+export const useSidebarStore = create<SidebarState>()(
+  persist(
+    (set) => ({
+      isCollapsed: false,
+      isMobileOpen: false,
+      setCollapsed: (isCollapsed) => set({ isCollapsed }),
+      toggleCollapsed: () =>
+        set((state) => ({ isCollapsed: !state.isCollapsed })),
+      setMobileOpen: (isMobileOpen) => set({ isMobileOpen }),
+    }),
+    {
+      name: "sms-sidebar",
+      partialize: (state) => ({ isCollapsed: state.isCollapsed }),
+    },
+  ),
+);

@@ -6,37 +6,62 @@ import {
   GraduationCapIcon,
   UserRoundIcon,
 } from "lucide-react";
-import dynamic from "next/dynamic";
+import { Suspense } from "react";
 
+import { ReportsOverviewLazy } from "@/components/dashboard/reports-overview-lazy";
+import { ReportsExportButton } from "@/components/dashboard/reports-export-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { getAdminReportSnapshot } from "@/features/reports/queries";
 
-const ReportsOverview = dynamic(
-  () =>
-    import("@/components/dashboard/reports-overview").then(
-      (module) => module.ReportsOverview,
-    ),
-  {
-    loading: () => (
-      <div className="app-subtle-surface p-6 text-caption text-muted-foreground">
-        Đang tải biểu đồ báo cáo...
-      </div>
-    ),
-  },
-);
+function AdminReportsSkeleton() {
+  return (
+    <div className="app-subtle-surface p-6 text-caption text-muted-foreground">
+      Đang tải dữ liệu báo cáo...
+    </div>
+  );
+}
 
-export default async function AdminReportsPage() {
+export default function AdminReportsPage() {
+  return (
+    <Suspense fallback={<AdminReportsSkeleton />}>
+      <AdminReportsPageContent />
+    </Suspense>
+  );
+}
+
+async function AdminReportsPageContent() {
   const report = await getAdminReportSnapshot();
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
+        actions={
+          <ReportsExportButton
+            classGpa={report.classGpa}
+            departmentDistribution={report.departmentDistribution}
+            passRates={report.passRates}
+            warnings={report.warnings}
+          />
+        }
         description="Tổng hợp chỉ số vận hành."
         icon={<BarChart3Icon className="size-5" />}
         info="Báo cáo tổng hợp phục vụ minh họa và kiểm tra nhanh cấu trúc dữ liệu, học vụ, điểm và mức độ sẵn sàng vận hành."
         title="Báo cáo"
       />
+      {report.missingViews.length ? (
+        <div className="space-y-3 rounded-lg border border-[color:var(--color-warning)]/40 bg-[color:var(--color-warning-soft)] p-4">
+          <div className="text-sm font-semibold text-[color:var(--color-warning-foreground)]">
+            Thiếu DB view báo cáo: {report.missingViews.join(", ")}
+          </div>
+          <div className="text-sm text-[color:var(--color-warning-foreground)]">
+            Chạy SQL bên dưới trong Supabase SQL Editor để tạo lại view.
+          </div>
+          <pre className="touch-scroll max-h-[320px] overflow-auto rounded-md border border-[color:var(--color-warning)]/30 bg-white p-3 text-xs leading-6 text-slate-700">
+            <code>{report.missingViewSql}</code>
+          </pre>
+        </div>
+      ) : null}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           description="Sinh viên đang còn hiệu lực học tập"
@@ -94,12 +119,20 @@ export default async function AdminReportsPage() {
           value={report.summary.liveRows}
         />
       </div>
-      <ReportsOverview
-        classGpa={report.classGpa}
-        departmentDistribution={report.departmentDistribution}
-        passRates={report.passRates}
-        warnings={report.warnings}
-      />
+      <Suspense
+        fallback={
+          <div className="app-subtle-surface p-6 text-caption text-muted-foreground">
+            Đang tải biểu đồ báo cáo...
+          </div>
+        }
+      >
+        <ReportsOverviewLazy
+          classGpa={report.classGpa}
+          departmentDistribution={report.departmentDistribution}
+          passRates={report.passRates}
+          warnings={report.warnings}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { buildPathWithUpdates, getStringField } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
+import { parseSupabaseError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { RegradeStatus } from "@/types/app";
 import { isValidRegradeTransition } from "@/features/regrades/transitions";
@@ -89,7 +90,10 @@ async function requireActiveProfile(
   } = await supabase.auth.getUser();
 
   if (userError) {
-    return { error: userError.message, success: false };
+    return {
+      error: parseSupabaseError(userError, "Không thể xác thực phiên đăng nhập."),
+      success: false,
+    };
   }
 
   if (!user) {
@@ -103,7 +107,10 @@ async function requireActiveProfile(
     .maybeSingle();
 
   if (profileError) {
-    return { error: profileError.message, success: false };
+    return {
+      error: parseSupabaseError(profileError, "Không thể tải thông tin người dùng."),
+      success: false,
+    };
   }
 
   const typedProfile = profile as
@@ -140,7 +147,10 @@ async function ensureLecturerCanReviewRequest(
     .maybeSingle();
 
   if (requestError) {
-    return { error: requestError.message, success: false };
+    return {
+      error: parseSupabaseError(requestError, "Không thể tải yêu cầu phúc khảo."),
+      success: false,
+    };
   }
 
   const typedRequest = request as { enrollment_id: string } | null;
@@ -155,7 +165,10 @@ async function ensureLecturerCanReviewRequest(
     .maybeSingle();
 
   if (enrollmentError) {
-    return { error: enrollmentError.message, success: false };
+    return {
+      error: parseSupabaseError(enrollmentError, "Không thể tải enrollment liên quan."),
+      success: false,
+    };
   }
 
   const typedEnrollment = enrollment as { course_offering_id: string } | null;
@@ -171,7 +184,13 @@ async function ensureLecturerCanReviewRequest(
     .maybeSingle();
 
   if (assignmentError) {
-    return { error: assignmentError.message, success: false };
+    return {
+      error: parseSupabaseError(
+        assignmentError,
+        "Không thể kiểm tra phân công giảng dạy.",
+      ),
+      success: false,
+    };
   }
 
   if (!assignment) {
@@ -214,7 +233,10 @@ export async function createRegradeRequestAction(
       .maybeSingle();
 
     if (gradeError) {
-      return { error: gradeError.message, success: false };
+      return {
+        error: parseSupabaseError(gradeError, "Không thể tải bản ghi điểm."),
+        success: false,
+      };
     }
 
     const typedGrade = grade as
@@ -238,7 +260,10 @@ export async function createRegradeRequestAction(
       .maybeSingle();
 
     if (enrollmentError) {
-      return { error: enrollmentError.message, success: false };
+      return {
+        error: parseSupabaseError(enrollmentError, "Không thể tải enrollment."),
+        success: false,
+      };
     }
 
     const typedEnrollment = enrollment as { student_id: string } | null;
@@ -258,7 +283,10 @@ export async function createRegradeRequestAction(
     } as never);
 
     if (insertError) {
-      return { error: insertError.message, success: false };
+      return {
+        error: parseSupabaseError(insertError, "Không thể gửi yêu cầu phúc khảo."),
+        success: false,
+      };
     }
 
     await createAuditLog({
@@ -274,9 +302,10 @@ export async function createRegradeRequestAction(
 
     return { message: "Đã gửi yêu cầu phúc khảo.", success: true };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Lỗi không xác định";
-    return { error: message, success: false };
+    return {
+      error: parseSupabaseError(error, "Không thể gửi yêu cầu phúc khảo."),
+      success: false,
+    };
   }
 }
 
@@ -353,7 +382,10 @@ export async function resolveRegradeRequestAction(
       .maybeSingle();
 
     if (requestError) {
-      return { error: requestError.message, success: false };
+      return {
+        error: parseSupabaseError(requestError, "Không thể tải yêu cầu phúc khảo."),
+        success: false,
+      };
     }
 
     const typedRequest = existingRequest as { status: RegradeStatus } | null;
@@ -394,7 +426,10 @@ export async function resolveRegradeRequestAction(
       .eq("id", requestId);
 
     if (updateError) {
-      return { error: updateError.message, success: false };
+      return {
+        error: parseSupabaseError(updateError, "Không thể cập nhật kết quả phúc khảo."),
+        success: false,
+      };
     }
 
     await createAuditLog({
@@ -420,9 +455,10 @@ export async function resolveRegradeRequestAction(
       success: true,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Lỗi không xác định";
-    return { error: message, success: false };
+    return {
+      error: parseSupabaseError(error, "Không thể xử lý yêu cầu phúc khảo."),
+      success: false,
+    };
   }
 }
 

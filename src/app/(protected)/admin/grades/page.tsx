@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   CheckIcon,
   ClipboardCheckIcon,
@@ -11,10 +12,14 @@ import { FormAlert } from "@/components/forms/form-alert";
 import { AdminGradesTable } from "@/components/dashboard/admin-grades-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { QueryToast } from "@/components/shared/query-toast";
 import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
-import { transitionOfferingGradesFormAction } from "@/features/admin-grades/actions";
+import {
+  rejectOfferingGradesFormAction,
+  transitionOfferingGradesFormAction,
+} from "@/features/admin-grades/actions";
 import {
   listAdminGradeReviewSnapshot,
   type AdminGradeFilter,
@@ -46,9 +51,23 @@ function resolveGradeFilter(value: string | string[] | undefined): AdminGradeFil
     : "ALL";
 }
 
-export default async function AdminGradesPage({
-  searchParams,
-}: AdminGradesPageProps) {
+function AdminGradesSkeleton() {
+  return (
+    <div className="app-subtle-surface p-6 text-caption text-muted-foreground">
+      Đang tải dữ liệu duyệt điểm...
+    </div>
+  );
+}
+
+export default function AdminGradesPage({ searchParams }: AdminGradesPageProps) {
+  return (
+    <Suspense fallback={<AdminGradesSkeleton />}>
+      <AdminGradesPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function AdminGradesPageContent({ searchParams }: AdminGradesPageProps) {
   const resolvedSearchParams = await searchParams;
   const error =
     typeof resolvedSearchParams.error === "string"
@@ -60,6 +79,12 @@ export default async function AdminGradesPage({
       : undefined;
   const currentFilter = resolveGradeFilter(resolvedSearchParams.status);
   const snapshot = await listAdminGradeReviewSnapshot(currentFilter);
+  const reviewOfferings = snapshot.offeringSummaries.filter(
+    (offering) =>
+      offering.submitted_count > 0 ||
+      offering.approved_count > 0 ||
+      offering.locked_count > 0,
+  );
   const returnTo =
     currentFilter === "ALL"
       ? "/admin/grades"
@@ -92,6 +117,7 @@ export default async function AdminGradesPage({
       />
       {error ? <FormAlert message={error} /> : null}
       {success ? <FormAlert message={success} success /> : null}
+      <QueryToast error={error} success={success} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           description="Tổng bản ghi điểm hiện có"
@@ -134,8 +160,8 @@ export default async function AdminGradesPage({
         title="Xử lý theo học phần"
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {snapshot.offeringSummaries.length ? (
-            snapshot.offeringSummaries.slice(0, 9).map((offering) => (
+          {reviewOfferings.length ? (
+            reviewOfferings.slice(0, 12).map((offering) => (
               <div
                 key={offering.offering_id}
                 className="app-subtle-surface p-5"
@@ -150,8 +176,9 @@ export default async function AdminGradesPage({
                     </div>
                   </div>
                   <div className="text-sm leading-6 text-muted-foreground">
-                    Chờ duyệt {offering.submitted_count} | Đã duyệt {offering.approved_count} |
-                    Đã khóa {offering.locked_count} | Tổng {offering.total_count}
+                    Chờ duyệt {offering.submitted_count} | Đã duyệt{" "}
+                    {offering.approved_count} | Đã khóa {offering.locked_count} | Tổng{" "}
+                    {offering.total_count}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <form action={transitionOfferingGradesFormAction}>
@@ -168,6 +195,25 @@ export default async function AdminGradesPage({
                         Duyệt theo học phần
                       </Button>
                     </form>
+                    <details className="w-full rounded-md border border-border/70 bg-white/80 p-2">
+                      <summary className="cursor-pointer text-sm font-medium text-foreground">
+                        Trả về DRAFT
+                      </summary>
+                      <form action={rejectOfferingGradesFormAction} className="mt-2 flex flex-col gap-2">
+                        <input name="offering_id" type="hidden" value={offering.offering_id} />
+                        <input name="return_to" type="hidden" value={returnTo} />
+                        <textarea
+                          className="min-h-[76px] rounded-md border border-border bg-white px-3 py-2 text-sm"
+                          minLength={3}
+                          name="reason"
+                          placeholder="Nhập lý do trả bảng điểm về DRAFT"
+                          required
+                        />
+                        <Button size="sm" type="submit" variant="secondary">
+                          Trả về DRAFT
+                        </Button>
+                      </form>
+                    </details>
                     <form action={transitionOfferingGradesFormAction}>
                       <input name="current_status" type="hidden" value="APPROVED" />
                       <input name="next_status" type="hidden" value="LOCKED" />
@@ -205,7 +251,7 @@ export default async function AdminGradesPage({
           ) : (
             <div className="md:col-span-2 xl:col-span-3">
               <EmptyState
-                description="Chưa có học phần nào đủ dữ liệu để thực hiện thao tác hàng loạt."
+                description="Chưa có học phần nào có dữ liệu SUBMITTED/APPROVED/LOCKED để xử lý."
                 title="Không có học phần phù hợp"
               />
             </div>

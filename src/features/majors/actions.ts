@@ -11,8 +11,9 @@ import {
 } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { majorSchema } from "@/features/majors/schemas";
 import type { ActionState } from "@/types/app";
 
@@ -37,7 +38,7 @@ export async function upsertMajorAction(
     return failure("Thông tin ngành chưa hợp lệ.", parsed.errors);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const payload = {
     code: parsed.data.code.toUpperCase(),
     degree_level: parsed.data.degree_level,
@@ -62,7 +63,8 @@ export async function upsertMajorAction(
       ]);
 
       return failure(
-        fieldErrors?.code?.[0] ?? "Không thể cập nhật ngành.",
+        fieldErrors?.code?.[0] ??
+          parseSupabaseError(error, "Không thể cập nhật ngành."),
         fieldErrors,
       );
     }
@@ -90,7 +92,8 @@ export async function upsertMajorAction(
       ]);
 
       return failure(
-        fieldErrors?.code?.[0] ?? "Không thể tạo ngành.",
+        fieldErrors?.code?.[0] ??
+          parseSupabaseError(error, "Không thể tạo ngành."),
         fieldErrors,
       );
     }
@@ -122,7 +125,7 @@ export async function toggleMajorStatusFormAction(formData: FormData) {
     redirectToMajors(returnPath, "error", "Thiếu dữ liệu để cập nhật trạng thái ngành.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const isActive = nextStatus === "ACTIVE";
   const { error } = await supabase
     .from("majors")
@@ -130,7 +133,11 @@ export async function toggleMajorStatusFormAction(formData: FormData) {
     .eq("id", majorId);
 
   if (error) {
-    redirectToMajors(returnPath, "error", error.message);
+    redirectToMajors(
+      returnPath,
+      "error",
+      parseSupabaseError(error, "Không thể cập nhật trạng thái ngành."),
+    );
   }
 
   await createAuditLog({

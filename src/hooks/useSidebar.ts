@@ -3,18 +3,17 @@
 import { useSidebarStore } from "@/stores/sidebarStore";
 
 export function useSidebar() {
-  const mode = useSidebarStore((state) => state.mode);
-  const mobileOpen = useSidebarStore((state) => state.mobileOpen);
-  const setMode = useSidebarStore((state) => state.setMode);
-  const toggleMode = useSidebarStore((state) => state.toggleMode);
+  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
+  const isMobileOpen = useSidebarStore((state) => state.isMobileOpen);
+  const setCollapsed = useSidebarStore((state) => state.setCollapsed);
+  const toggleCollapsed = useSidebarStore((state) => state.toggleCollapsed);
   const setMobileOpen = useSidebarStore((state) => state.setMobileOpen);
 
   return {
-    collapsed: mode === "collapsed",
-    mobileOpen,
-    mode,
+    isCollapsed,
+    isMobileOpen,
+    setCollapsed,
     setMobileOpen,
-    setMode,
-    toggleMode,
+    toggleCollapsed,
   };
 }

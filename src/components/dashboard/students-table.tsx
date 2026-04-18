@@ -1,17 +1,19 @@
 "use client";
 
-import { CircleOffIcon, PencilLineIcon, RotateCcwIcon } from "lucide-react";
+import { PencilLineIcon } from "lucide-react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 
-import { DataTable } from "@/components/data-table/data-table";
-import { InlineActionForm } from "@/components/shared/inline-action-form";
+import {
+  DataTable,
+  type ServerPaginationConfig,
+} from "@/components/data-table/data-table";
+import { StudentStatusToggleButton } from "@/components/dashboard/student-status-toggle-button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TableActionLink } from "@/components/shared/table-action-button";
-import { toggleStudentStatusFormAction } from "@/features/students/actions";
 import { buildEditPath } from "@/lib/admin-routing";
 
 type StudentTableRow = {
-  access_status: string;
+  access_status: "ACTIVE" | "INACTIVE" | "LOCKED";
   academic_class_code: string;
   current_status: string;
   full_name: string;
@@ -55,37 +57,10 @@ function buildColumns(returnTo: string) {
           icon={<PencilLineIcon aria-hidden="true" className="size-4" />}
           label="Sửa sinh viên"
         />
-        <InlineActionForm
-          action={toggleStudentStatusFormAction}
-          confirmMessage={
-            row.original.access_status === "ACTIVE"
-              ? `Tạm ngưng tài khoản sinh viên ${row.original.student_code}?`
-              : `Kích hoạt lại tài khoản sinh viên ${row.original.student_code}?`
-          }
-          fields={[
-            { name: "student_id", value: row.original.id },
-            {
-              name: "next_status",
-              value: row.original.access_status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
-            },
-            { name: "return_to", value: returnTo },
-          ]}
-          icon={
-            row.original.access_status === "ACTIVE" ? (
-              <CircleOffIcon aria-hidden="true" className="size-4" />
-            ) : (
-              <RotateCcwIcon aria-hidden="true" className="size-4" />
-            )
-          }
-          iconOnly
-          label={row.original.access_status === "ACTIVE" ? "Tạm ngưng" : "Kích hoạt"}
-          pendingLabel="Đang cập nhật"
-          tooltip={
-            row.original.access_status === "ACTIVE"
-              ? "Tạm ngưng tài khoản"
-              : "Kích hoạt tài khoản"
-          }
-          variant={row.original.access_status === "ACTIVE" ? "outline" : "success"}
+        <StudentStatusToggleButton
+          status={row.original.access_status}
+          studentCode={row.original.student_code}
+          studentId={row.original.id}
         />
       </div>
     ),
@@ -96,11 +71,13 @@ function buildColumns(returnTo: string) {
 type StudentsTableProps = {
   data: StudentTableRow[];
   returnTo?: string;
+  serverPagination?: ServerPaginationConfig | undefined;
 };
 
 export function StudentsTable({
   data,
   returnTo = "/admin/students",
+  serverPagination,
 }: StudentsTableProps) {
   return (
     <DataTable
@@ -108,6 +85,7 @@ export function StudentsTable({
       data={data}
       emptyDescription="Tạo hoặc nhập sinh viên để bắt đầu thử luồng học vụ, đăng ký và điểm."
       emptyTitle="Chưa có sinh viên"
+      serverPagination={serverPagination}
     />
   );
 }

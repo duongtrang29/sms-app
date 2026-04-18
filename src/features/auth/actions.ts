@@ -6,6 +6,7 @@ import { failure, parseWithSchema, partial, success } from "@/lib/actions";
 import { tryCreateAuditLog } from "@/lib/audit";
 import { matchServerFieldErrors } from "@/lib/form-errors";
 import { isAppRole } from "@/lib/auth/roles";
+import { parseSupabaseError } from "@/lib/errors";
 import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -43,7 +44,10 @@ export async function loginAction(
     ]);
 
     return failure(
-      "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản.",
+      parseSupabaseError(
+        error,
+        "Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản.",
+      ),
       fieldErrors,
     );
   }
@@ -117,7 +121,10 @@ export async function forgotPasswordAction(
       },
     ]);
 
-    return failure("Không thể gửi email đặt lại mật khẩu.", fieldErrors);
+    return failure(
+      parseSupabaseError(error, "Không thể gửi email đặt lại mật khẩu."),
+      fieldErrors,
+    );
   }
 
   return success("Đã gửi email hướng dẫn đặt lại mật khẩu.");
@@ -147,7 +154,10 @@ export async function resetPasswordAction(
       },
     ]);
 
-    return failure("Không thể cập nhật mật khẩu.", fieldErrors);
+    return failure(
+      parseSupabaseError(error, "Không thể cập nhật mật khẩu."),
+      fieldErrors,
+    );
   }
 
   const auditResult = await tryCreateAuditLog({

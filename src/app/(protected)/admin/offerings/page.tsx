@@ -11,12 +11,18 @@ import dynamic from "next/dynamic";
 import { CourseOfferingForm } from "@/components/forms/course-offering-form";
 import { FormAlert } from "@/components/forms/form-alert";
 import { FormCardSkeleton } from "@/components/forms/form-container";
+import { QueryToast } from "@/components/shared/query-toast";
 import { FilterToolbar } from "@/components/shared/filter-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
 import { RoutePanel } from "@/components/shared/route-panel";
 import { SectionPanel } from "@/components/shared/section-panel";
 import { StatCard } from "@/components/shared/stat-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
+import {
+  closeOfferingEnrollmentFormAction,
+  openOfferingEnrollmentFormAction,
+} from "@/features/course-offerings/actions";
 import { listCourses } from "@/features/courses/queries";
 import {
   getCourseOfferingById,
@@ -87,6 +93,20 @@ async function CourseOfferingEditorCard({
 }
 
 export default async function OfferingsPage({ searchParams }: OfferingsPageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="app-subtle-surface p-6 text-caption text-muted-foreground">
+          Đang tải học phần mở...
+        </div>
+      }
+    >
+      <OfferingsPageContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function OfferingsPageContent({ searchParams }: OfferingsPageProps) {
   const resolvedSearchParams = await searchParams;
   const editId = getSearchParamString(resolvedSearchParams, "edit") || null;
   const error = getSearchParamString(resolvedSearchParams, "error");
@@ -238,6 +258,10 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
       {error || success ? (
         <FormAlert message={error || success} success={!error} />
       ) : null}
+      <QueryToast
+        error={error}
+        success={success}
+      />
       <SectionPanel>
         <FilterToolbar
           key={`${queryValue}|${semesterFilter}|${statusFilter}`}
@@ -265,6 +289,57 @@ export default async function OfferingsPage({ searchParams }: OfferingsPageProps
             },
           ]}
         />
+      </SectionPanel>
+      <SectionPanel
+        description="Thao tác nhanh trạng thái mở/đóng đăng ký cho từng học phần."
+        title="Card học phần mở"
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {rows.map((row) => (
+            <div
+              key={`offering-card-${row.id}`}
+              className="app-subtle-surface flex flex-col gap-4 p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="font-semibold tracking-tight text-foreground">
+                    {row.courseName}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {row.semesterName} | Nhóm {row.section_code}
+                  </div>
+                </div>
+                <StatusBadge value={row.status} />
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Giảng viên: {row.lecturerName}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Đăng ký: {row.enrollment}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {row.status !== "OPEN" ? (
+                  <form action={openOfferingEnrollmentFormAction}>
+                    <input name="offering_id" type="hidden" value={row.id} />
+                    <input name="return_to" type="hidden" value={returnTo} />
+                    <Button size="sm" type="submit">
+                      Mở đăng ký
+                    </Button>
+                  </form>
+                ) : null}
+                {row.status === "OPEN" ? (
+                  <form action={closeOfferingEnrollmentFormAction}>
+                    <input name="offering_id" type="hidden" value={row.id} />
+                    <input name="return_to" type="hidden" value={returnTo} />
+                    <Button size="sm" type="submit" variant="outline">
+                      Đóng đăng ký
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
       </SectionPanel>
       <CourseOfferingsTable data={rows} returnTo={returnTo} />
       <RoutePanel

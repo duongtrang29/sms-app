@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { buildPathWithUpdates, getStringField } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
+import { parseSupabaseError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 
 type EnrollmentActionResult<T = void> =
@@ -20,7 +21,10 @@ async function requireActiveStudent(
   } = await supabase.auth.getUser();
 
   if (userError) {
-    return { error: userError.message, success: false };
+    return {
+      error: parseSupabaseError(userError, "Không thể xác thực phiên đăng nhập."),
+      success: false,
+    };
   }
 
   if (!user) {
@@ -34,7 +38,10 @@ async function requireActiveStudent(
     .maybeSingle();
 
   if (profileError) {
-    return { error: profileError.message, success: false };
+    return {
+      error: parseSupabaseError(profileError, "Không thể tải thông tin tài khoản."),
+      success: false,
+    };
   }
 
   const resolvedProfile = profile as
@@ -105,7 +112,10 @@ export async function registerEnrollmentAction(
     });
 
     if (result.error) {
-      return { error: result.error.message, success: false };
+      return {
+        error: parseSupabaseError(result.error, "Đăng ký học phần không thành công."),
+        success: false,
+      };
     }
 
     await createAuditLog({
@@ -125,9 +135,10 @@ export async function registerEnrollmentAction(
       success: true,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Lỗi không xác định";
-    return { error: message, success: false };
+    return {
+      error: parseSupabaseError(error, "Đăng ký học phần không thành công."),
+      success: false,
+    };
   }
 }
 
@@ -173,7 +184,10 @@ export async function cancelEnrollmentAction(
       .maybeSingle();
 
     if (enrollmentError) {
-      return { error: enrollmentError.message, success: false };
+      return {
+        error: parseSupabaseError(enrollmentError, "Không thể tải đăng ký học phần."),
+        success: false,
+      };
     }
 
     const resolvedEnrollment = enrollment as
@@ -201,7 +215,10 @@ export async function cancelEnrollmentAction(
     });
 
     if (result.error) {
-      return { error: result.error.message, success: false };
+      return {
+        error: parseSupabaseError(result.error, "Hủy đăng ký học phần không thành công."),
+        success: false,
+      };
     }
 
     await createAuditLog({
@@ -221,9 +238,10 @@ export async function cancelEnrollmentAction(
       success: true,
     };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Lỗi không xác định";
-    return { error: message, success: false };
+    return {
+      error: parseSupabaseError(error, "Hủy đăng ký học phần không thành công."),
+      success: false,
+    };
   }
 }
 

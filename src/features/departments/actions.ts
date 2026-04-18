@@ -7,8 +7,9 @@ import { failure, parseWithSchema } from "@/lib/actions";
 import { buildPathWithUpdates } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { departmentSchema } from "@/features/departments/schemas";
 import type { ActionState } from "@/types/app";
 
@@ -44,7 +45,7 @@ export async function upsertDepartmentAction(
     return failure("Thông tin khoa chưa hợp lệ.", parsed.errors);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const payload = {
     code: parsed.data.code.toUpperCase(),
     description: parsed.data.description || null,
@@ -68,7 +69,8 @@ export async function upsertDepartmentAction(
       ]);
 
       return failure(
-        fieldErrors?.code?.[0] ?? "Không thể cập nhật khoa.",
+        fieldErrors?.code?.[0] ??
+          parseSupabaseError(error, "Không thể cập nhật khoa."),
         fieldErrors,
       );
     }
@@ -100,7 +102,8 @@ export async function upsertDepartmentAction(
     ]);
 
     return failure(
-      fieldErrors?.code?.[0] ?? "Không thể tạo khoa mới.",
+      fieldErrors?.code?.[0] ??
+        parseSupabaseError(error, "Không thể tạo khoa mới."),
       fieldErrors,
     );
   }
@@ -126,7 +129,7 @@ export async function deleteDepartmentFormAction(formData: FormData) {
     redirectToDepartments(returnPath, "error", "Thiếu khoa cần xóa.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [
     { count: majorCount, error: majorError },
@@ -148,13 +151,11 @@ export async function deleteDepartmentFormAction(formData: FormData) {
   ]);
 
   if (majorError || lecturerError || courseError) {
+    const firstError = majorError ?? lecturerError ?? courseError;
     redirectToDepartments(
       returnPath,
       "error",
-      majorError?.message ??
-        lecturerError?.message ??
-        courseError?.message ??
-        "Không thể kiểm tra ràng buộc khoa.",
+      parseSupabaseError(firstError, "Không thể kiểm tra ràng buộc khoa."),
     );
   }
 
@@ -188,7 +189,11 @@ export async function deleteDepartmentFormAction(formData: FormData) {
     .eq("id", departmentId);
 
   if (deleteError) {
-    redirectToDepartments(returnPath, "error", deleteError.message);
+    redirectToDepartments(
+      returnPath,
+      "error",
+      parseSupabaseError(deleteError, "Không thể xóa khoa."),
+    );
   }
 
   await createAuditLog({

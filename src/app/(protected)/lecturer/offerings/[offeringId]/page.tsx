@@ -1,19 +1,10 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 
-import { FormAlert } from "@/components/forms/form-alert";
+import { LecturerGradeInputTable } from "@/components/grades/lecturer-grade-input-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  saveGradeFormAction,
-  submitOfferingGradesFormAction,
-} from "@/features/grades/actions";
 import { listOfferingGradebook } from "@/features/grades/queries";
-import { formatScore } from "@/lib/format";
 
 type GradebookPageProps = {
   params: Promise<{ offeringId: string }>;
@@ -26,10 +17,6 @@ export default async function GradebookPage({
 }: GradebookPageProps) {
   const { offeringId } = await params;
   const resolvedSearchParams = await searchParams;
-  const returnToQuery =
-    typeof resolvedSearchParams.return_to === "string"
-      ? resolvedSearchParams.return_to
-      : undefined;
   const error =
     typeof resolvedSearchParams.error === "string"
       ? resolvedSearchParams.error
@@ -41,23 +28,16 @@ export default async function GradebookPage({
 
   const gradebook = await listOfferingGradebook(offeringId);
   const offering = gradebook.offering;
-  const returnToPath =
-    returnToQuery &&
-    (returnToQuery.startsWith("/lecturer/offerings/") ||
-      returnToQuery.startsWith("/lecturer/grades/"))
-      ? returnToQuery
-      : `/lecturer/offerings/${offeringId}`;
 
   if (!offering) {
     notFound();
   }
 
-  const gradeMap = new Map(
-    gradebook.grades.map((grade) => [grade.enrollment_id, grade]),
-  );
   const studentMap = new Map(
     gradebook.students.map((student) => [student.id, student.student_code]),
   );
+  const studentCodes = Object.fromEntries(studentMap.entries());
+
   const submittedCount = gradebook.grades.filter(
     (grade) => grade.status === "SUBMITTED",
   ).length;
@@ -71,21 +51,11 @@ export default async function GradebookPage({
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        actions={
-          <form action={submitOfferingGradesFormAction}>
-            <input name="offering_id" type="hidden" value={offeringId} />
-            <input name="return_to" type="hidden" value={returnToPath} />
-            <Button type="submit" variant="outline">
-              Gửi duyệt toàn bộ
-            </Button>
-          </form>
-        }
-        description="Giảng viên nhập điểm thành phần, lưu nháp hoặc gửi duyệt. Điểm tổng và GPA được cơ sở dữ liệu tính tự động."
+        description="Nhập điểm thành phần trực tiếp trên bảng, tự lưu nháp khi rời ô và gửi duyệt tập trung khi đã hoàn tất."
         eyebrow="Khu giảng viên"
         title={`Bảng điểm ${gradebook.course?.code ?? ""} - nhóm ${offering.section_code}`}
       />
-      {error ? <FormAlert message={error} /> : null}
-      {success ? <FormAlert message={success} success /> : null}
+
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard
           description="Tổng sinh viên đang có trong lớp học phần."
@@ -95,107 +65,40 @@ export default async function GradebookPage({
         />
         <StatCard
           description="Bản ghi điểm còn ở trạng thái nháp."
-          label="Nháp"
+          label="DRAFT"
           tone="warning"
           value={draftCount}
         />
         <StatCard
           description="Bản ghi điểm đã khóa và không còn cho chỉnh sửa."
-          label="Đã khóa"
+          label="LOCKED"
           tone="neutral"
           value={lockedCount}
         />
       </div>
-      {submittedCount ? (
+
+      {submittedCount > 0 ? (
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[color:var(--color-warning)]/15 bg-[color:var(--color-warning-soft)] px-3 py-1.5 text-sm text-[color:var(--color-warning-foreground)]">
           <span className="app-status-dot bg-[color:var(--color-warning)]" />
           {submittedCount} bản ghi đang chờ quản trị viên duyệt.
         </div>
       ) : null}
-      {gradebook.enrollments.length ? (
-        <Card className="shadow-none">
-          <CardHeader>
-            <CardTitle>Danh sách nhập điểm</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="hidden grid-cols-[1.45fr_repeat(4,minmax(0,0.78fr))_0.9fr_auto] gap-3 rounded-2xl bg-muted/40 px-4 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground xl:grid">
-              <div>Sinh viên</div>
-              <div>Chuyên cần</div>
-              <div>Giữa kỳ</div>
-              <div>Cuối kỳ</div>
-              <div>Ghi chú</div>
-              <div>Trạng thái</div>
-              <div>Lưu</div>
-            </div>
-            {gradebook.enrollments.map((enrollment) => {
-              const grade = gradeMap.get(enrollment.id);
-              const studentName = gradebook.profiles[enrollment.student_id];
-              const studentCode = studentMap.get(enrollment.student_id);
 
-              return (
-                <form
-                  action={saveGradeFormAction}
-                  className="app-subtle-surface grid gap-3 p-4 xl:grid-cols-[1.45fr_repeat(4,minmax(0,0.78fr))_0.9fr_auto] xl:items-center"
-                  key={enrollment.id}
-                >
-                  <input name="enrollment_id" type="hidden" value={enrollment.id} />
-                  <input name="offering_id" type="hidden" value={offeringId} />
-                  <input name="return_to" type="hidden" value={returnToPath} />
-                  <div className="flex flex-col gap-2">
-                    <div className="font-semibold tracking-tight">
-                      {studentCode} - {studentName}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                      <StatusBadge value={grade?.status ?? "DRAFT"} />
-                      <span>Tổng: {formatScore(grade?.total_score)}</span>
-                    </div>
-                  </div>
-                  <Input
-                    defaultValue={grade?.attendance_score ?? ""}
-                    max={10}
-                    min={0}
-                    name="attendance_score"
-                    placeholder="CC"
-                    step="0.1"
-                    type="number"
-                  />
-                  <Input
-                    defaultValue={grade?.midterm_score ?? ""}
-                    max={10}
-                    min={0}
-                    name="midterm_score"
-                    placeholder="GK"
-                    step="0.1"
-                    type="number"
-                  />
-                  <Input
-                    defaultValue={grade?.final_score ?? ""}
-                    max={10}
-                    min={0}
-                    name="final_score"
-                    placeholder="CK"
-                    step="0.1"
-                    type="number"
-                  />
-                  <Input
-                    defaultValue={grade?.remark ?? ""}
-                    name="remark"
-                    placeholder="Ghi chú"
-                  />
-                  <select
-                    className="app-native-select"
-                    defaultValue={grade?.status ?? "DRAFT"}
-                    name="status"
-                  >
-                    <option value="DRAFT">Lưu nháp</option>
-                    <option value="SUBMITTED">Gửi duyệt</option>
-                  </select>
-                  <Button type="submit">Lưu</Button>
-                </form>
-              );
-            })}
-          </CardContent>
-        </Card>
+      {gradebook.enrollments.length ? (
+        <LecturerGradeInputTable
+          enrollments={gradebook.enrollments}
+          grades={gradebook.grades}
+          initialError={error}
+          initialSuccess={success}
+          offeringId={offeringId}
+          studentCodes={studentCodes}
+          studentNames={gradebook.profiles}
+          weights={{
+            attendance: offering.attendance_weight,
+            midterm: offering.midterm_weight,
+            final: offering.final_weight,
+          }}
+        />
       ) : (
         <EmptyState
           description="Học phần này chưa có sinh viên đăng ký, nên hiện chưa có dòng dữ liệu để nhập điểm."

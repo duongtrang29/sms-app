@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { unstable_noStore as noStore } from "next/cache";
 
 import { requireLecturerOfferingAccess } from "@/lib/auth/guards";
 import { requireRole } from "@/lib/auth/session";
@@ -12,7 +13,10 @@ type GradebookSnapshot = {
   grades: Grade[];
   enrollments: Enrollment[];
   offering: {
+    attendance_weight: number;
+    final_weight: number;
     id: string;
+    midterm_weight: number;
     section_code: string;
   } | null;
   profiles: Record<string, string>;
@@ -20,6 +24,7 @@ type GradebookSnapshot = {
 };
 
 export async function listStudentGrades() {
+  noStore();
   const profile = await requireRole(["STUDENT"]);
   const supabase = await createClient();
   const { data: enrollments, error: enrollmentError } = await supabase
@@ -43,7 +48,8 @@ export async function listStudentGrades() {
   const { data, error } = await supabase
     .from("grades")
     .select("*")
-    .in("enrollment_id", enrollmentIds as never);
+    .in("enrollment_id", enrollmentIds as never)
+    .in("status", ["APPROVED", "LOCKED"] as never);
 
   if (error) {
     throw new Error(error.message);
@@ -53,6 +59,7 @@ export async function listStudentGrades() {
 }
 
 export async function listOfferingGradebook(offeringId: string) {
+  noStore();
   await requireRole(["LECTURER"]);
   await requireLecturerOfferingAccess(offeringId);
   const supabase = await createClient();
@@ -61,7 +68,7 @@ export async function listOfferingGradebook(offeringId: string) {
     .from("enrollments")
     .select("*")
     .eq("course_offering_id", offeringId)
-    .neq("status", "DROPPED");
+    .in("status", ["ENROLLED", "REGISTERED"] as never);
 
   if (enrollmentError) {
     throw new Error(enrollmentError.message);
@@ -71,7 +78,10 @@ export async function listOfferingGradebook(offeringId: string) {
     .from("course_offerings")
     .select(
       `
+        attendance_weight,
+        final_weight,
         id,
+        midterm_weight,
         section_code,
         course:courses!inner(
           code,
@@ -148,7 +158,13 @@ export async function listOfferingGradebook(offeringId: string) {
     enrollments: (enrollments as Enrollment[]) ?? [],
     grades: (gradesData as Grade[]) ?? [],
     offering:
-      (offering as { id: string; section_code: string } | null) ?? null,
+      (offering as {
+        attendance_weight: number;
+        final_weight: number;
+        id: string;
+        midterm_weight: number;
+        section_code: string;
+      } | null) ?? null,
     profiles: studentRows.reduce<Record<string, string>>((accumulator, row) => {
       if (row.profile) {
         accumulator[row.profile.id] = row.profile.full_name;
@@ -163,6 +179,7 @@ export async function listOfferingGradebook(offeringId: string) {
 }
 
 export async function listAssignedOfferingsForLecturer() {
+  noStore();
   const profile = await requireRole(["LECTURER"]);
   const supabase = await createClient();
   const { data, error } = await supabase

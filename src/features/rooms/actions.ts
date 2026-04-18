@@ -11,8 +11,9 @@ import {
 } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { roomSchema } from "@/features/rooms/schemas";
 import type { ActionState } from "@/types/app";
 
@@ -36,7 +37,7 @@ export async function upsertRoomAction(
     return failure("Thông tin phòng học chưa hợp lệ.", parsed.errors);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const payload = {
     building: parsed.data.building || null,
     capacity: parsed.data.capacity,
@@ -61,7 +62,8 @@ export async function upsertRoomAction(
       ]);
 
       return failure(
-        fieldErrors?.code?.[0] ?? "Không thể cập nhật phòng học.",
+        fieldErrors?.code?.[0] ??
+          parseSupabaseError(error, "Không thể cập nhật phòng học."),
         fieldErrors,
       );
     }
@@ -88,7 +90,8 @@ export async function upsertRoomAction(
       ]);
 
       return failure(
-        fieldErrors?.code?.[0] ?? "Không thể tạo phòng học.",
+        fieldErrors?.code?.[0] ??
+          parseSupabaseError(error, "Không thể tạo phòng học."),
         fieldErrors,
       );
     }
@@ -120,7 +123,7 @@ export async function toggleRoomStatusFormAction(formData: FormData) {
     redirectToRooms(returnPath, "error", "Thiếu dữ liệu để cập nhật trạng thái phòng học.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const isActive = nextStatus === "ACTIVE";
   const { error } = await supabase
     .from("rooms")
@@ -128,7 +131,11 @@ export async function toggleRoomStatusFormAction(formData: FormData) {
     .eq("id", roomId);
 
   if (error) {
-    redirectToRooms(returnPath, "error", error.message);
+    redirectToRooms(
+      returnPath,
+      "error",
+      parseSupabaseError(error, "Không thể cập nhật trạng thái phòng học."),
+    );
   }
 
   await createAuditLog({

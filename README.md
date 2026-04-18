@@ -10,14 +10,14 @@ Repo này đã có đủ route, server actions, schema và seed để chạy loc
 
 ## 1. Tài liệu nên đọc
 
-- [Hướng dẫn sử dụng + setup DEV/PROD](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md)
-- [Kế hoạch kiểm thử theo báo cáo](./docs/guides/KIEM_THU_THEO_BAO_CAO.md)
+- [Hướng dẫn sử dụng + setup DEV/PROD](./docs/HUONG_DAN_SU_DUNG_SETUP.md)
+- [Kế hoạch kiểm thử theo báo cáo](./docs/KIEM_THU_THEO_BAO_CAO.md)
 
 Nếu bạn mới bắt đầu:
 
 1. đọc mục `Quickstart` bên dưới
-2. dựng local theo [docs/guides/HUONG_DAN_SU_DUNG_SETUP.md](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md)
-3. chạy checklist kiểm thử tại [docs/guides/KIEM_THU_THEO_BAO_CAO.md](./docs/guides/KIEM_THU_THEO_BAO_CAO.md)
+2. dựng local theo [docs/HUONG_DAN_SU_DUNG_SETUP.md](./docs/HUONG_DAN_SU_DUNG_SETUP.md)
+3. chạy checklist kiểm thử tại [docs/KIEM_THU_THEO_BAO_CAO.md](./docs/KIEM_THU_THEO_BAO_CAO.md)
 
 ## 2. Stack hiện tại
 
@@ -138,7 +138,7 @@ Chỉ cần đảm bảo đúng 4 biến:
 - `supabase/migrations/0001_schema.sql`
 
 Các migration lịch sử được lưu tại `supabase/migrations_archive/` để tra cứu, không dùng cho `db push` mới.
-Hướng dẫn chi tiết nằm ở [docs/guides/HUONG_DAN_SU_DUNG_SETUP.md](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md).
+Hướng dẫn chi tiết nằm ở [docs/HUONG_DAN_SU_DUNG_SETUP.md](./docs/HUONG_DAN_SU_DUNG_SETUP.md).
 
 ### Bước 5: tạo admin đăng nhập (lệnh ngắn)
 
@@ -161,8 +161,10 @@ Muốn đổi thông tin thì sửa trong `.env.local`:
 
 ### Bước 6 (tuỳ chọn): nạp dữ liệu demo
 
-- demo nhẹ: `npm run seed:demo`
-- dataset ICTU đầy đủ: chạy `supabase/seed.sql`
+- bộ dữ liệu mới nhất cho test đầy đủ báo cáo: `npm run db:seed`
+- reset bộ dữ liệu mới nhất: `npm run db:clear`
+- demo nhẹ (legacy): `npm run seed:demo`
+- dataset ICTU đầy đủ (legacy): chạy `supabase/seed.sql`
 
 ### Bước 7: chạy app
 
@@ -185,6 +187,8 @@ npm run test
 npm run test:sql
 npm run admin:bootstrap
 npm run setup:quick
+npm run db:seed
+npm run db:clear
 npm run seed:demo
 npm run reset:demo
 ```
@@ -215,6 +219,17 @@ Phù hợp khi cần dataset nhẹ hơn, reset nhanh bằng script.
 - lecturer mẫu: `ha.nguyen@sms.local`
 - student mẫu: `se22001@sms.local`
 
+### Dùng `npm run db:seed` (khuyến nghị cho kiểm thử báo cáo mới nhất)
+
+Phù hợp để test toàn bộ flow cập nhật mới: offerings, enrollment RPC, lecturer grades, admin approval, reports.
+
+- reset nhanh: `npm run db:clear`
+- seed đầy đủ: `npm run db:seed`
+- admin: `admin@sms.edu.vn / Admin@123456`
+- lecturer: `gv.nguyen@sms.edu.vn / Gv@123456`
+- student: `sv.001@sms.edu.vn ... sv.010@sms.edu.vn / Sv@123456`
+- tài khoản khóa để test auth middleware: `sv.006@sms.edu.vn` (`INACTIVE`)
+
 ## 8. Lưu ý môi trường production
 
 - app runtime và các script quản trị đều dùng `SUPABASE_SERVICE_ROLE_KEY` cho một số tác vụ quản trị người dùng, vì vậy biến này phải có trên server và tuyệt đối không được lộ phía client
@@ -227,7 +242,7 @@ Nếu cần nâng nhanh user có sẵn lên admin trong SQL Editor:
 select public.promote_profile_to_admin('admin@sms.local');
 ```
 
-Hướng dẫn production chi tiết nằm ở [docs/guides/HUONG_DAN_SU_DUNG_SETUP.md](./docs/guides/HUONG_DAN_SU_DUNG_SETUP.md).
+Hướng dẫn production chi tiết nằm ở [docs/HUONG_DAN_SU_DUNG_SETUP.md](./docs/HUONG_DAN_SU_DUNG_SETUP.md).
 
 ## 9. Những điểm kỹ thuật cần nhớ
 

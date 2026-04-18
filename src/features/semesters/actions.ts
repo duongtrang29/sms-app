@@ -11,8 +11,9 @@ import {
 } from "@/lib/admin-routing";
 import { createAuditLog } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/session";
+import { parseSupabaseError } from "@/lib/errors";
 import { matchServerFieldErrors } from "@/lib/form-errors";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { semesterSchema } from "@/features/semesters/schemas";
 import type { ActionState } from "@/types/app";
 
@@ -41,7 +42,7 @@ export async function upsertSemesterAction(
     return failure("Thông tin học kỳ chưa hợp lệ.", parsed.errors);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const payload = {
     academic_year: parsed.data.academic_year,
     code: parsed.data.code.toUpperCase(),
@@ -89,7 +90,7 @@ export async function upsertSemesterAction(
       return failure(
         fieldErrors
           ? Object.values(fieldErrors)[0]?.[0] ?? "Không thể cập nhật học kỳ."
-          : "Không thể cập nhật học kỳ.",
+          : parseSupabaseError(error, "Không thể cập nhật học kỳ."),
         fieldErrors,
       );
     }
@@ -133,7 +134,7 @@ export async function upsertSemesterAction(
       return failure(
         fieldErrors
           ? Object.values(fieldErrors)[0]?.[0] ?? "Không thể tạo học kỳ."
-          : "Không thể tạo học kỳ.",
+          : parseSupabaseError(error, "Không thể tạo học kỳ."),
         fieldErrors,
       );
     }
@@ -167,14 +168,18 @@ export async function deleteSemesterFormAction(formData: FormData) {
     redirectToSemesters(returnPath, "error", "Thiếu học kỳ cần xóa.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { count, error: offeringError } = await supabase
     .from("course_offerings")
     .select("id", { count: "exact", head: true })
     .eq("semester_id", semesterId);
 
   if (offeringError) {
-    redirectToSemesters(returnPath, "error", offeringError.message);
+    redirectToSemesters(
+      returnPath,
+      "error",
+      parseSupabaseError(offeringError, "Không thể kiểm tra học phần trong học kỳ."),
+    );
   }
 
   if ((count ?? 0) > 0) {
@@ -191,7 +196,11 @@ export async function deleteSemesterFormAction(formData: FormData) {
     .eq("id", semesterId);
 
   if (deleteError) {
-    redirectToSemesters(returnPath, "error", deleteError.message);
+    redirectToSemesters(
+      returnPath,
+      "error",
+      parseSupabaseError(deleteError, "Không thể xóa học kỳ."),
+    );
   }
 
   await createAuditLog({

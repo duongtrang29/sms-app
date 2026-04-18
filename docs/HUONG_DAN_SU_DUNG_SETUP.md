@@ -1,50 +1,40 @@
-# Bộ Tài Liệu Setup + Vận Hành SMS (Phiên Bản Hiện Tại)
+# Bộ Tài Liệu Setup + Vận Hành SMS (Bản Mới Nhất)
 
-Cập nhật: 18/04/2026  
-Phạm vi: setup, sử dụng, vận hành, test và kiểm thử theo codebase hiện tại.
+Cập nhật: 19/04/2026  
+Phạm vi: setup local, chạy test, seed dữ liệu demo mới và deploy production lên Vercel.
 
 ## 0. Bộ tài liệu đi kèm
 
-1. Setup + vận hành: `docs/guides/HUONG_DAN_SU_DUNG_SETUP.md` (file này)
-2. Test + kiểm thử SIT/UAT: `docs/guides/KIEM_THU_THEO_BAO_CAO.md`
+1. Setup + vận hành: `docs/HUONG_DAN_SU_DUNG_SETUP.md` (file này)
+2. Test + kiểm thử SIT/UAT: `docs/KIEM_THU_THEO_BAO_CAO.md`
+3. Chỉ mục tài liệu: `docs/README.md`
 
 ## 1. Tổng quan hệ thống
 
 Stack chính:
 
-1. Frontend: Next.js 16 + React 19 + TypeScript + TailwindCSS
-2. Data/Auth: Supabase PostgreSQL + Auth
-3. UI/Data layer: shadcn/ui + React Hook Form + Zod + TanStack Table
-4. Runtime: Node.js
+1. Frontend: Next.js 16 + React 19 + TypeScript + Tailwind CSS
+2. Auth + Database: Supabase Auth + PostgreSQL
+3. UI/Form/Data: shadcn/ui + React Hook Form + Zod + TanStack Table
+4. Charts: Recharts
 
-Vai trò đang dùng:
+Vai trò:
 
 1. `ADMIN`
 2. `LECTURER`
 3. `STUDENT`
 
-Module chính theo route:
-
-1. `/dashboard`
-2. `/profile`
-3. `/admin/*`
-4. `/lecturer/*`
-5. `/student/*`
-6. `/login`
-7. `/forgot-password`
-8. `/reset-password`
-
 ## 2. Chuẩn bị môi trường
 
 1. Node.js >= 20
 2. npm >= 10
-3. Supabase CLI mới nhất
-4. Supabase project riêng cho DEV và PRODUCTION
-5. Vercel account (nếu deploy production)
+3. Supabase project riêng cho DEV và PRODUCTION
+4. (Khuyến nghị) Supabase CLI để quản lý local db/project
+5. Vercel account để deploy production
 
-## 3. Setup mới từ đầu (DEV)
+## 3. Setup local từ đầu
 
-### 3.1 Cài package
+### 3.1 Cài dependency
 
 ```bash
 npm install
@@ -52,11 +42,30 @@ npm install
 
 ### 3.2 Tạo `.env.local`
 
+Copy từ `.env.example`:
+
+```bash
+cp .env.example .env.local
+```
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Các biến bắt buộc:
+
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+```
+
+Biến tùy chọn (bootstrap admin):
+
+```env
 ADMIN_BOOTSTRAP_EMAIL=admin@sms.local
 ADMIN_BOOTSTRAP_PASSWORD=Admin@123456
 ADMIN_BOOTSTRAP_FULL_NAME=System Admin
@@ -65,214 +74,167 @@ ADMIN_BOOTSTRAP_MUST_CHANGE_PASSWORD=false
 
 Lưu ý:
 
-1. Không đưa `SUPABASE_SERVICE_ROLE_KEY` vào client/public.
-2. `NEXT_PUBLIC_APP_URL` phải đúng domain chạy thật để flow reset password callback đúng.
+1. Không đưa `SUPABASE_SERVICE_ROLE_KEY` vào client/public bundle.
+2. `NEXT_PUBLIC_APP_URL` phải đúng URL chạy thật để flow reset password callback hoạt động.
 
-### 3.3 Chạy migration đúng thứ tự
+### 3.3 Chạy schema database
 
-Khuyến nghị: dùng project Supabase mới để tránh xung đột schema legacy.
+Project mới chỉ chạy:
 
-Chạy trong SQL Editor:
+1. `supabase/migrations/0001_schema.sql`
 
-1. `supabase/migrations/0001_schema.sql` (bắt buộc)
+Không chạy lại các migration trong `supabase/migrations_archive/` trên project mới.
 
-Ghi chú:
-
-1. Chỉ chạy đúng file ở mục 3.3 cho project mới.
-2. Toàn bộ migration cũ nằm ở `supabase/migrations_archive/` và chỉ để tham chiếu lịch sử.
-3. Không chạy các file migration legacy cũ.
-
-### 3.4 Verify schema nhanh
-
-```sql
-select table_name
-from information_schema.tables
-where table_schema = 'public'
-  and table_name in (
-    'roles','profiles','departments','majors','academic_classes',
-    'semesters','courses','course_prerequisites','rooms','lecturers',
-    'students','course_offerings','teaching_assignments','schedules',
-    'enrollments','grades','grade_change_logs','regrade_requests','audit_logs'
-  )
-order by table_name;
-```
-
-```sql
-select proname
-from pg_proc
-where pronamespace = 'public'::regnamespace
-  and proname in (
-    'register_enrollment',
-    'cancel_enrollment',
-    'log_audit_event',
-    'current_user_role',
-    'promote_profile_to_admin'
-  )
-order by proname;
-```
-
-### 3.5 Deploy Edge Functions
-
-SMS hiện tại không có Edge Functions custom bắt buộc cho core flow.  
-Bỏ qua bước này.
-
-### 3.6 Set secret cho Edge Functions
-
-SMS hiện tại chưa dùng secret runtime cho Edge Functions custom.  
-Bỏ qua bước này.
-
-### 3.7 Bootstrap tài khoản admin đầu tiên
-
-Flow chuẩn:
-
-1. Điền đúng env ở mục 3.2.
-2. Chạy bootstrap:
+### 3.4 Bootstrap admin
 
 ```bash
 npm run admin:bootstrap
 ```
 
-3. Script sẽ tạo/cập nhật user + profile admin và in ra email/password để đăng nhập ngay.
-
-Nếu cần promote user đã tồn tại trong `auth.users`:
+Nếu cần promote user hiện có trong DB:
 
 ```sql
 select public.promote_profile_to_admin('user.need.admin@sms.local');
 ```
 
-## 4. Seed dữ liệu demo local (v2)
+## 4. Seed dữ liệu demo
 
-Chạy đúng 1 trong 2 hướng:
+### 4.1 Bộ seed mới nhất (khuyến nghị)
 
-1. Demo nhẹ:
+1. Xóa dữ liệu demo cũ:
+
+```bash
+npm run db:clear
+```
+
+2. Seed đầy đủ:
+
+```bash
+npm run db:seed
+```
+
+Bộ seed này phục vụ test các flow cập nhật:
+
+1. `/admin/offerings`
+2. `/student/enrollment`
+3. `/lecturer/offerings/[offeringId]` (alias) hoặc `/lecturer/grades/[id]`
+4. `/admin/grades`
+5. `/student/grades`
+6. `/admin/reports`
+
+Tài khoản demo chính:
+
+1. `admin@sms.edu.vn / Admin@123456`
+2. `gv.nguyen@sms.edu.vn / Gv@123456`
+3. `gv.tran@sms.edu.vn / Gv@123456`
+4. `gv.le@sms.edu.vn / Gv@123456`
+5. `sv.001@sms.edu.vn ... sv.010@sms.edu.vn / Sv@123456`
+6. Account khóa để test middleware: `sv.006@sms.edu.vn` (`INACTIVE`)
+
+### 4.2 Seed legacy (vẫn giữ để tương thích)
+
+1. Demo nhẹ cũ:
    1. `npm run reset:demo`
    2. `npm run seed:demo`
-2. Dataset ICTU:
+2. Dataset SQL lớn:
    1. `supabase/seed.sql`
 
-Không trộn cả 2 hướng trên cùng một database nếu không chủ động quản lý dữ liệu.
+Không trộn đồng thời seed legacy và seed mới nếu không có kế hoạch dọn dữ liệu rõ ràng.
 
-## 5. Chạy ứng dụng
+## 5. Chạy và kiểm tra kỹ thuật
+
+### 5.1 Chạy app local
 
 ```bash
 npm run dev
 ```
 
-Mặc định: `http://localhost:3000`
+URL mặc định: `http://localhost:3000`
 
-## 6. Hướng dẫn sử dụng theo vai trò
-
-### 6.1 `ADMIN`
-
-1. Quản trị user nghiệp vụ tại `/admin/students`, `/admin/lecturers`
-2. Quản trị danh mục tại `/admin/departments`, `/admin/majors`, `/admin/classes`, `/admin/semesters`, `/admin/rooms`
-3. Quản trị đào tạo tại `/admin/courses`, `/admin/offerings`, `/admin/schedules`, `/admin/grades`, `/admin/regrade-requests`
-4. Theo dõi hệ thống tại `/admin/reports`, `/admin/audit-logs`
-
-### 6.2 `LECTURER`
-
-1. Xem học phần giảng dạy và lịch dạy
-2. Nhập/sửa/submit điểm theo quyền
-3. Xử lý phúc khảo theo luồng nghiệp vụ
-
-### 6.3 `STUDENT`
-
-1. Đăng ký và hủy đăng ký học phần
-2. Xem lịch học, điểm
-3. Gửi yêu cầu phúc khảo
-
-### 6.4 Luồng vận hành ngày thường cho admin
-
-1. Vào `/admin/semesters` cấu hình học kỳ hiện hành.
-2. Vào `/admin/courses` và `/admin/offerings` mở học phần.
-3. Vào `/admin/schedules` xếp lịch học.
-4. Theo dõi vận hành tại `/admin/reports` và `/admin/audit-logs`.
-
-## 7. Setup production
-
-1. Tạo Supabase project production riêng
-2. Chạy cùng migration track như mục 3.3
-3. Deploy Edge Functions production: không áp dụng với SMS hiện tại
-4. Set secrets production cho Edge Functions: không áp dụng với SMS hiện tại
-5. Deploy frontend lên Vercel với:
-   1. `NEXT_PUBLIC_APP_URL`
-   2. `NEXT_PUBLIC_SUPABASE_URL`
-   3. `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   4. `SUPABASE_SERVICE_ROLE_KEY`
-   5. `ADMIN_BOOTSTRAP_EMAIL`
-   6. `ADMIN_BOOTSTRAP_PASSWORD`
-   7. `ADMIN_BOOTSTRAP_FULL_NAME`
-   8. `ADMIN_BOOTSTRAP_MUST_CHANGE_PASSWORD`
-
-Lưu ý production:
-
-1. Cấu hình Supabase Auth `Site URL` và `Redirect URLs` đúng domain production (`/auth/callback`).
-2. Không hardcode service role key trong source code frontend.
-
-## 8. Test kỹ thuật nhanh
+### 5.2 Lệnh kiểm tra chất lượng
 
 ```bash
+npm run lint
+npm run typecheck
+npm run check
 npm run build
 npm run test
 ```
 
-Kết quả mong đợi hiện tại:
+## 6. Deploy production (Vercel + Supabase)
 
-1. Build Next.js + TypeScript pass
-2. Vitest pass toàn bộ
+### 6.1 Chuẩn bị Supabase production
 
-## 9. Kiểm thử thủ công (UAT/SIT)
+1. Tạo project Supabase production riêng.
+2. Chạy `supabase/migrations/0001_schema.sql`.
+3. Cấu hình Supabase Auth:
+   1. `Site URL` = domain production (ví dụ `https://sms.example.com`)
+   2. `Redirect URLs` gồm `https://sms.example.com/auth/callback`
 
-Xem checklist chi tiết tại file kiểm thử:
+### 6.2 Cấu hình project Vercel
 
-1. [docs/guides/KIEM_THU_THEO_BAO_CAO.md](./KIEM_THU_THEO_BAO_CAO.md)
+Thiết lập Environment Variables trên Vercel cho `Production`:
 
-## 10. Troubleshooting thường gặp
+1. `NEXT_PUBLIC_APP_URL`
+2. `NEXT_PUBLIC_SUPABASE_URL`
+3. `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. `SUPABASE_SERVICE_ROLE_KEY`
+5. `ADMIN_BOOTSTRAP_EMAIL` (khuyến nghị)
+6. `ADMIN_BOOTSTRAP_PASSWORD` (khuyến nghị)
+7. `ADMIN_BOOTSTRAP_FULL_NAME` (khuyến nghị)
+8. `ADMIN_BOOTSTRAP_MUST_CHANGE_PASSWORD` (khuyến nghị)
 
-### 10.1 Đăng nhập thất bại sau khi đã tạo tài khoản
+### 6.3 Deploy
 
-Nguyên nhân: thiếu/sai profile role hoặc account chưa ACTIVE.
+1. Push code lên branch release/main.
+2. Tạo production deployment trên Vercel.
+3. Theo dõi build log và xác nhận build pass.
+
+### 6.4 Khởi tạo admin sau deploy
+
+Chạy `npm run admin:bootstrap` trong môi trường đã trỏ đúng biến production để tạo profile admin đầu tiên.
+
+### 6.5 Checklist sau deploy
+
+1. Đăng nhập admin thành công.
+2. Redirect `/dashboard` về đúng role.
+3. Flow reset password hoạt động với domain production.
+4. Các route role-protected bị chặn đúng khi truy cập sai vai trò.
+5. Chạy thử `npm run db:seed` trên staging riêng (không chạy trên production trừ khi có chủ đích demo).
+
+## 7. Troubleshooting nhanh
+
+### 7.1 Lỗi đăng nhập dù user tồn tại trong auth
+
+Nguyên nhân thường gặp: thiếu `public.profiles` hoặc sai `role_code/status`.
 
 Xử lý:
 
-1. Chạy lại `npm run admin:bootstrap`
-2. Hoặc chạy `select public.promote_profile_to_admin('<email>');`
+1. Chạy lại `npm run admin:bootstrap` (với tài khoản admin)
+2. Hoặc dùng `promote_profile_to_admin(...)`
 
-### 10.2 Lỗi quyền truy cập route theo vai trò
+### 7.2 Lỗi callback/reset password
 
-Nguyên nhân: role trong `public.profiles` không đúng `ADMIN/LECTURER/STUDENT`.
-
-Xử lý:
-
-1. Kiểm tra role tại `public.profiles`
-2. Đồng bộ role bằng bootstrap/promote SQL
-
-### 10.3 `npm run test:sql` lỗi Docker
-
-Nguyên nhân: chưa chạy Docker Desktop.
-
-Xử lý:
-
-1. Cài Docker Desktop
-2. Mở Docker Desktop trước khi chạy `npm run test:sql`
-
-### 10.4 Reset password callback sai domain
-
-Nguyên nhân: `NEXT_PUBLIC_APP_URL` hoặc Supabase Auth URL config sai.
+Nguyên nhân: sai `NEXT_PUBLIC_APP_URL` hoặc Supabase Auth URL config.
 
 Xử lý:
 
 1. Sửa `NEXT_PUBLIC_APP_URL`
-2. Sửa `Site URL` + `Redirect URLs` trong Supabase Auth
+2. Sửa `Site URL` + `Redirect URLs` trong Supabase
 
-## 11. Danh sách file quan trọng
+### 7.3 Seed lỗi duplicate key
+
+1. Chạy lại `npm run db:clear`
+2. Chạy `npm run db:seed`
+
+Script seed mới đã tự dọn dữ liệu demo theo `code/email` để chạy lặp lại an toàn.
+
+## 8. File quan trọng
 
 1. `README.md`
 2. `docs/README.md`
-3. `docs/guides/HUONG_DAN_SU_DUNG_SETUP.md`
-4. `docs/guides/KIEM_THU_THEO_BAO_CAO.md`
+3. `docs/HUONG_DAN_SU_DUNG_SETUP.md`
+4. `docs/KIEM_THU_THEO_BAO_CAO.md`
 5. `supabase/migrations/0001_schema.sql`
-6. `supabase/seed.sql`
+6. `scripts/seed.ts`
 7. `scripts/bootstrap-admin.ts`
-8. `scripts/seed-demo.ts`
-9. `scripts/reset-demo.ts`
