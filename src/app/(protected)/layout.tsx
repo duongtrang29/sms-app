@@ -1,4 +1,4 @@
-import { AppShell } from "@/components/app-shell/app-shell";
+import { AppShell } from "@/components/layout/AppShell";
 import { requireAuth } from "@/lib/auth/session";
 
 export default async function ProtectedLayout({

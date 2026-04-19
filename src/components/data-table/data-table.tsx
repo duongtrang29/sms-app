@@ -115,13 +115,13 @@ function buildVisiblePages(currentPage: number, pageCount: number) {
 
 function SkeletonTable({ columnCount, rowCount = 5 }: { columnCount: number; rowCount?: number }) {
   return (
-    <div className="rounded-lg border border-border bg-white">
+    <div className="rounded-lg border border-border bg-card">
       <div className="table-scroll w-full overflow-x-auto">
         <table className="w-full min-w-[720px] border-separate border-spacing-0">
           <thead>
             <tr>
               {Array.from({ length: columnCount }).map((_, index) => (
-                <th className="h-12 border-b border-border bg-white px-3 text-left" key={`skeleton-head-${index}`}>
+                <th className="h-12 border-b border-border bg-card px-3 text-left" key={`skeleton-head-${index}`}>
                   <Skeleton className="h-4 w-16" />
                 </th>
               ))}
@@ -174,7 +174,7 @@ export function DataTable<TData>({
         <input
           aria-label="Chọn tất cả"
           checked={table.getIsAllPageRowsSelected()}
-          className="size-4 rounded border-gray-300"
+          className="size-4 rounded border-input accent-primary"
           onChange={table.getToggleAllPageRowsSelectedHandler()}
           type="checkbox"
         />
@@ -183,7 +183,7 @@ export function DataTable<TData>({
         <input
           aria-label="Chọn dòng"
           checked={row.getIsSelected()}
-          className="size-4 rounded border-gray-300"
+          className="size-4 rounded border-input accent-primary"
           onChange={row.getToggleSelectedHandler()}
           type="checkbox"
         />
@@ -248,6 +248,8 @@ export function DataTable<TData>({
   const visiblePages = buildVisiblePages(currentPage, pageCount);
   const canNextPage = isServerPagination ? currentPage < pageCount : table.getCanNextPage();
   const canPreviousPage = isServerPagination ? currentPage > 1 : table.getCanPreviousPage();
+  const showPageSizeSelect = !isServerPagination && totalRows > (pageSizeOptions[0] ?? initialPageSize);
+  const showPagination = pageCount > 1;
   const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
   const columnCount = table.getVisibleLeafColumns().length || tableColumns.length;
   const serverPageParam = serverPagination?.pageParam ?? "page";
@@ -292,14 +294,14 @@ export function DataTable<TData>({
 
   return (
     <div className="relative flex flex-col gap-4">
-      <div className="rounded-lg border border-border bg-white">
+      <div className="rounded-lg border border-border bg-card">
         {caption ? (
           <div className="border-b border-border bg-muted px-4 py-3 text-xs text-muted-foreground">
             {caption}
           </div>
         ) : null}
 
-        <div className="table-scroll touch-scroll relative max-h-[40rem] w-full overflow-x-auto overflow-y-auto">
+        <div className="table-scroll relative max-h-[40rem] w-full overflow-auto">
           <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -312,7 +314,7 @@ export function DataTable<TData>({
                           : undefined
                       }
                       className={cn(
-                        "sticky top-0 z-10 h-12 bg-white px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase",
+                        "sticky top-0 z-10 h-12 bg-card px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase",
                         resolveAlignmentClassName(header.column.columnDef.meta?.align),
                         header.column.columnDef.meta?.headerClassName,
                       )}
@@ -353,8 +355,8 @@ export function DataTable<TData>({
               {pageRows.map((row) => (
                 <tr
                   className={cn(
-                    "h-[52px] border-b border-border odd:bg-white even:bg-slate-50/60",
-                    row.getIsSelected() && "bg-blue-50/80",
+                    "h-[52px] border-b border-border odd:bg-card even:bg-muted/35",
+                    row.getIsSelected() && "bg-accent/70",
                   )}
                   key={row.id}
                 >
@@ -378,103 +380,106 @@ export function DataTable<TData>({
       </div>
 
       <div className="flex flex-col gap-3 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
-          <div className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-2">
-          <span className="app-status-dot bg-primary" />
-          Hiển thị {pageStart}-{pageEnd} / {totalRows} bản ghi. Trang {currentPage}/{pageCount}
+        <div className="inline-flex min-h-[36px] items-center rounded-md border border-border bg-muted/35 px-3 py-2">
+          Hiển thị {pageStart}-{pageEnd} / {totalRows} bản ghi
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {!isServerPagination ? (
-            <>
-              <label className="sr-only" htmlFor={pageSizeSelectId}>
-                Số dòng mỗi trang
-              </label>
-              <select
-                className="app-native-select min-w-[7.5rem]"
-                id={pageSizeSelectId}
-                onChange={(event) => table.setPageSize(Number(event.target.value))}
-                value={pagination.pageSize}
-              >
-                {pageSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size} / trang
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : null}
+        {showPageSizeSelect || showPagination ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {showPageSizeSelect ? (
+              <>
+                <label className="sr-only" htmlFor={pageSizeSelectId}>
+                  Số dòng mỗi trang
+                </label>
+                <select
+                  className="app-native-select min-w-[7.5rem]"
+                  id={pageSizeSelectId}
+                  onChange={(event) => table.setPageSize(Number(event.target.value))}
+                  value={pagination.pageSize}
+                >
+                  {pageSizeOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {size} / trang
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
 
-          <Pagination className="mx-0 w-auto">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  className={cn(!canPreviousPage && "pointer-events-none opacity-50")}
-                  href={
-                    isServerPagination
-                      ? buildServerPageHref(Math.max(1, currentPage - 1))
-                      : "#"
-                  }
-                  onClick={
-                    isServerPagination
-                      ? undefined
-                      : (event) => {
-                          event.preventDefault();
-                          if (!canPreviousPage) {
-                            return;
-                          }
-                          table.previousPage();
+            {showPagination ? (
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      className={cn(!canPreviousPage && "pointer-events-none opacity-50")}
+                      href={
+                        isServerPagination
+                          ? buildServerPageHref(Math.max(1, currentPage - 1))
+                          : "#"
+                      }
+                      onClick={
+                        isServerPagination
+                          ? undefined
+                          : (event) => {
+                              event.preventDefault();
+                              if (!canPreviousPage) {
+                                return;
+                              }
+                              table.previousPage();
+                            }
+                      }
+                    />
+                  </PaginationItem>
+                  {visiblePages.map((page) => (
+                    <PaginationItem key={`page-${page}`}>
+                      <PaginationLink
+                        href={isServerPagination ? buildServerPageHref(page) : "#"}
+                        isActive={page === currentPage}
+                        onClick={
+                          isServerPagination
+                            ? undefined
+                            : (event) => {
+                                event.preventDefault();
+                                table.setPageIndex(page - 1);
+                              }
                         }
-                  }
-                />
-              </PaginationItem>
-              {visiblePages.map((page) => (
-                <PaginationItem key={`page-${page}`}>
-                  <PaginationLink
-                    href={isServerPagination ? buildServerPageHref(page) : "#"}
-                    isActive={page === currentPage}
-                    onClick={
-                      isServerPagination
-                        ? undefined
-                        : (event) => {
-                            event.preventDefault();
-                            table.setPageIndex(page - 1);
-                          }
-                    }
-                  >
-                    {page}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  className={cn(!canNextPage && "pointer-events-none opacity-50")}
-                  href={
-                    isServerPagination
-                      ? buildServerPageHref(Math.min(pageCount, currentPage + 1))
-                      : "#"
-                  }
-                  onClick={
-                    isServerPagination
-                      ? undefined
-                      : (event) => {
-                          event.preventDefault();
-                          if (!canNextPage) {
-                            return;
-                          }
-                          table.nextPage();
-                        }
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      className={cn(!canNextPage && "pointer-events-none opacity-50")}
+                      href={
+                        isServerPagination
+                          ? buildServerPageHref(Math.min(pageCount, currentPage + 1))
+                          : "#"
+                      }
+                      onClick={
+                        isServerPagination
+                          ? undefined
+                          : (event) => {
+                              event.preventDefault();
+                              if (!canNextPage) {
+                                return;
+                              }
+                              table.nextPage();
+                            }
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {enableRowSelection && selectedRows.length > 0 ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex min-h-[52px] w-full max-w-xl items-center justify-between gap-3 rounded-xl border border-blue-200 bg-white px-4 py-3 shadow-lg">
-            <div className="text-sm text-gray-700">Đã chọn {selectedRows.length} bản ghi</div>
+          <div className="pointer-events-auto flex min-h-[52px] w-full max-w-xl items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-[var(--shadow-dropdown)]">
+            <div className="text-sm text-muted-foreground">Đã chọn {selectedRows.length} bản ghi</div>
             <div className="flex items-center gap-2">
               {bulkActions ? bulkActions(selectedRows, clearSelection) : null}
               <Button onClick={clearSelection} size="sm" type="button" variant="outline">

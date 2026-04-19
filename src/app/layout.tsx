@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-screen flex flex-col bg-background text-foreground">
+      <body className="min-h-screen bg-background text-foreground">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

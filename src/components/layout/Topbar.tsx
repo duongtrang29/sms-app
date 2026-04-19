@@ -120,7 +120,7 @@ export function Topbar({
         <nav aria-label="breadcrumb" className="hidden min-w-0 items-center gap-2 sm:flex">
           {breadcrumbs.map((crumb, index) => (
             <div className="flex min-w-0 items-center gap-2" key={`${crumb.label}-${index}`}>
-              {index > 0 ? <span className="text-xs text-gray-400">/</span> : null}
+              {index > 0 ? <span className="text-xs text-muted-foreground">/</span> : null}
               {crumb.href ? (
                 <Link className="truncate text-xs text-muted-foreground hover:text-foreground" href={crumb.href}>
                   {crumb.label}

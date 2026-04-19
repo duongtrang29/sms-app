@@ -123,9 +123,9 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
             aria-expanded={expanded}
             className={cn(
               "flex min-h-[44px] w-full items-center rounded-lg border px-3 py-2 text-sm transition-colors",
-              "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+              "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
               active
-                ? "border-blue-200 bg-blue-50 text-blue-700"
+                ? "border-primary/25 bg-accent text-accent-foreground"
                 : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
               collapsed ? "justify-center" : "gap-2",
             )}
@@ -148,9 +148,9 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
           <Link
             className={cn(
               "flex min-h-[44px] items-center rounded-lg border px-3 py-2 text-sm transition-colors",
-              "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+              "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
               active
-                ? "border-blue-200 bg-blue-50 text-blue-700"
+                ? "border-primary/25 bg-accent text-accent-foreground"
                 : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
               collapsed ? "justify-center" : "gap-2",
             )}
@@ -187,13 +187,13 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
                   <Link
                     className={cn(
                       "flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
-                      "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
                       childActive
-                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        ? "border-primary/25 bg-accent text-accent-foreground"
                         : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
                     )}
                     href={child.href}
-                    key={child.href}
+                    key={`${child.href}-${child.label}`}
                     onClick={() => onNavigate?.()}
                     onFocus={() => {
                       router.prefetch(child.href);
@@ -221,9 +221,9 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
         aria-expanded={floatingOpen}
         className={cn(
           "flex min-h-[44px] w-full items-center justify-center rounded-lg border px-3 py-2 text-sm transition-colors",
-          "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
           active
-            ? "border-blue-200 bg-blue-50 text-blue-700"
+            ? "border-primary/25 bg-accent text-accent-foreground"
             : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
         )}
         onClick={() => setFloatingOpen((open) => !open)}
@@ -254,13 +254,13 @@ export function SidebarItem({ collapsed, item, onNavigate }: SidebarItemProps) {
                   <Link
                     className={cn(
                       "flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors",
-                      "focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
                       childActive
-                        ? "border-blue-200 bg-blue-50 text-blue-700"
+                        ? "border-primary/25 bg-accent text-accent-foreground"
                         : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground",
                     )}
                     href={child.href}
-                    key={child.href}
+                    key={`${child.href}-${child.label}`}
                     onClick={() => {
                       setFloatingOpen(false);
                       onNavigate?.();

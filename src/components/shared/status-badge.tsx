@@ -45,15 +45,6 @@ const statusMetaMap: Record<
   UNDER_REVIEW: { label: "Đang xem xét", tone: "info" },
 };
 
-const dotClassNameMap: Partial<Record<BadgeTone, string>> = {
-  destructive: "bg-[color:var(--color-danger)]",
-  info: "bg-[color:var(--color-info)]",
-  neutral: "bg-[color:var(--color-neutral)]",
-  success: "bg-[color:var(--color-success)]",
-  violet: "bg-purple-600",
-  warning: "bg-[color:var(--color-warning)]",
-};
-
 export function StatusBadge({ value }: StatusBadgeProps) {
   if (!value) {
     return <Badge variant="outline">Chưa có</Badge>;
@@ -64,14 +55,5 @@ export function StatusBadge({ value }: StatusBadgeProps) {
     tone: "outline" as const,
   };
 
-  return (
-    <Badge variant={meta.tone}>
-      {meta.tone !== "outline" ? (
-        <span
-          className={`app-status-dot ${dotClassNameMap[meta.tone] ?? "bg-current/70"}`}
-        />
-      ) : null}
-      {meta.label}
-    </Badge>
-  );
+  return <Badge variant={meta.tone}>{meta.label}</Badge>;
 }

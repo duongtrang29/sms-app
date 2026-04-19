@@ -140,7 +140,7 @@ export function FilterToolbar({
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.8fr_repeat(3,minmax(0,1fr))_auto]">
         <div className="relative">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             aria-label={searchPlaceholder}
             className="pl-9"
@@ -155,7 +155,7 @@ export function FilterToolbar({
 
           return (
             <div className="relative" key={select.key}>
-              <ListFilterIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
+              <ListFilterIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <select
                 aria-label={select.label}
                 className="app-native-select pl-9"
